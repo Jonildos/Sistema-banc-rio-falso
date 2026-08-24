@@ -1,0 +1,6 @@
+@Sistema_banc_rio_falso_HostAddress = http://localhost:5279
+
+GET {{Sistema_banc_rio_falso_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
