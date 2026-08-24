@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Bancário</title>
+    <!-- Importando o Bootstrap direto da nuvem (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            
+            <!-- CARTÃO 1: Abertura de Conta -->
+            <div class="card shadow-sm mb-4" id="cartao-abertura">
+                <div class="card-body text-center">
+                    <h3 class="mb-3">Bem-vindo ao Banco Falso</h3>
+                    <div class="input-group mb-3">
+                        <input type="text" id="inputNome" class="form-control" placeholder="Digite seu nome">
+                        <button class="btn btn-primary" id="btnCriar">Abrir Conta</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARTÃO 2: Painel de Controle (Invisível no início) -->
+            <div class="card shadow-sm d-none" id="cartao-painel">
+                <div class="card-body">
+                    <h4 class="card-title">Olá, <span id="displayTitular" class="text-primary"></span></h4>
+                    <p class="text-muted small">Chassi: <span id="displayId"></span></p>
+                    <h2 class="display-4 text-success my-4">R$ <span id="displaySaldo">0,00</span></h2>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" id="inputValor" class="form-control" placeholder="0.00" step="0.01">
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success w-100" id="btnDepositar">Depositar</button>
+                        <button class="btn btn-danger w-100" id="btnSacar">Sacar</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variável global para guardar o ID da conta ativa
+    let contaAtivaId = ""; 
+    const URL_BASE = "http://localhost:5279/api/conta";
+
+    // 1. AÇÃO: CRIAR CONTA
+    document.getElementById('btnCriar').addEventListener('click', async () => {
+        const nome = document.getElementById('inputNome').value;
+        if (!nome) return alert("Digite um nome!");
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/${nome}`, { method: 'POST' });
+            const conta = await resposta.json();
+            
+            // Salva o chassi gerado
+            contaAtivaId = conta.id; 
+            
+            // Atualiza a tela com os dados
+            document.getElementById('displayTitular').innerText = conta.titular;
+            document.getElementById('displayId').innerText = conta.id;
+            document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
+            
+            // Esconde o login e mostra o painel
+            document.getElementById('cartao-abertura').classList.add('d-none');
+            document.getElementById('cartao-painel').classList.remove('d-none');
+
+        } catch (erro) {
+            console.error("Erro ao criar conta:", erro);
+        }
+    });
+
+    // 2. AÇÃO: DEPOSITAR E SACAR (Função genérica)
+    async function processarTransacao(tipo) {
+        const valor = parseFloat(document.getElementById('inputValor').value);
+        if (!valor || valor <= 0) return alert("Digite um valor válido!");
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/${contaAtivaId}/${tipo}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(valor) // Manda o valor no corpo da requisição
+            });
+
+            // Se o C# retornar erro (ex: Saldo insuficiente), o status não será "ok"
+            if (!resposta.ok) {
+                const mensagemErro = await resposta.text();
+                return alert("Operação negada: " + mensagemErro);
+            }
+
+            const resultado = await resposta.json();
+            
+            // Atualiza o saldo gigante na tela
+            document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toFixed(2);
+            document.getElementById('inputValor').value = ""; // Limpa o input
+
+        } catch (erro) {
+            console.error(`Erro na transação de ${tipo}:`, erro);
+        }
+    }
+
+    // Vincula os botões às funções
+    document.getElementById('btnDepositar').addEventListener('click', () => processarTransacao("depositar"));
+    document.getElementById('btnSacar').addEventListener('click', () => processarTransacao("sacar"));
+
+</script>
+</body>
+</html>

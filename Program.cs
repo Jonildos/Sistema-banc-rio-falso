@@ -1,13 +1,22 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. A INSTRUÇÃO
 builder.Services.AddControllers();
 
-// CORREÇÃO AQUI: Mandamos o builder construir o app
+// 1. A REGRA DO CORS: Ensinamos o cérebro a criar uma política de passe livre
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirTudo", policy =>
+    {
+        policy.AllowAnyOrigin()  // Permite qualquer site (no mundo real, colocaríamos só o endereço do FotoPontoCom)
+              .AllowAnyHeader()  // Permite qualquer tipo de dado oculto
+              .AllowAnyMethod(); // Permite POST, GET, PUT, etc.
+    });
+});
+
 var app = builder.Build();
 
-// 2. O ROTEAMENTO
-app.MapControllers();
+// 2. LIGA O CORS: Avisamos o servidor para usar a regra ANTES de abrir as portas
+app.UseCors("PermitirTudo");
 
-// 3. LIGA O MOTOR
+app.MapControllers();
 app.Run();
