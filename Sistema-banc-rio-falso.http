@@ -1,6 +1,2 @@
-@Sistema_banc_rio_falso_HostAddress = http://localhost:5279
-
-GET {{Sistema_banc_rio_falso_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
+### Disparo para criar uma conta nova
+POST http://localhost:5279/api/conta/Jonas
