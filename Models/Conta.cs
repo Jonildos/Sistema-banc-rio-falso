@@ -5,13 +5,15 @@ namespace Sistema_banc_rio_falso.Models
     {
         public Guid Id {get; private set; }
         public string Titular {get; private set; }
+        public string Cpf { get; private set; } = string.Empty;
         public decimal Saldo {get; private set; }
 
         // Construtor (como a conta nasce)
-        public Conta(string titular)
+        public Conta(string titular, string cpf)
             {
                 Id = Guid.NewGuid(); //gera um id único no formato universal
                 Titular = titular;
+                Cpf = cpf;
                 Saldo = 0; //toda conta nasce zerada
             }
 

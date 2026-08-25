@@ -3,71 +3,109 @@ using Sistema_banc_rio_falso.Models;
 
 namespace Sistema_banc_rio_falso.Controllers
 {
-  [ApiController]
-  [Route("api/[controller]")]
-  public class ContaController : ControllerBase
-  {
-    private static List<Conta> _bancoDeDados = new List<Conta>();
-
-    [HttpPost("{titular}")]
-    public IActionResult CriarConta(string titular)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ContaController : ControllerBase
     {
-        var novaConta = new Conta(titular);
-        _bancoDeDados.Add(novaConta);
-        
-        return Ok(novaConta); // status 200
-    }
+        private static List<Conta> _bancoDeDados = new List<Conta>();
 
-    [HttpGet("{id}")]
-    public IActionResult ConsultarSaldo(Guid id)
-    {
-        var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
-        if (conta == null)
-            return NotFound("Conta não encontrada no sistema."); //erro 404
-
-        return Ok(conta);
-    }
-    // Rota POST: Depositar dinheiro
-    [HttpPost("{id}/depositar")]
-    public IActionResult Depositar(Guid id, [FromBody] decimal valor)
-    {
-        var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
-        
-        if (conta == null)
-            return NotFound("Conta não localizada no sistema.");
-
-        try
+        // Classe molde (DTO) para receber os dados com segurança no corpo da requisição
+        public class CriarContaDto
         {
-            // Tenta acionar a regra matemática que fizemos na classe Conta
-            conta.Depositar(valor);
-            return Ok(new { mensagem = "Depósito realizado com sucesso!", saldoAtual = conta.Saldo });
+            public string Titular { get; set; } = string.Empty;
+            public string Cpf { get; set; } = string.Empty;
         }
-        catch (ArgumentException ex)
+
+        // Rota POST: Criar conta exigindo Titular e CPF via JSON
+        [HttpPost]
+        public IActionResult CriarConta([FromBody] CriarContaDto request)
         {
-            // Se a classe Conta recusar o valor (ex: depósito negativo), cai aqui
-            return BadRequest(ex.Message);
+            if (string.IsNullOrWhiteSpace(request.Titular) || string.IsNullOrWhiteSpace(request.Cpf))
+                return BadRequest("O Titular e o CPF são obrigatórios para a abertura da conta.");
+
+            var novaConta = new Conta(request.Titular, request.Cpf);
+            _bancoDeDados.Add(novaConta);
+            
+            return Ok(novaConta); // Status 200
+        }
+
+        [HttpGet("{id}")]
+        public IActionResult ConsultarSaldo(Guid id)
+        {
+            var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
+            if (conta == null)
+                return NotFound("Conta não encontrada no sistema.");
+
+            return Ok(conta);
+        }
+
+        // Rota POST: Depositar dinheiro
+        [HttpPost("{id}/depositar")]
+        public IActionResult Depositar(Guid id, [FromBody] decimal valor)
+        {
+            var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
+            
+            if (conta == null)
+                return NotFound("Conta não localizada no sistema.");
+
+            try
+            {
+                conta.Depositar(valor);
+                return Ok(new { mensagem = "Depósito realizado com sucesso!", saldoAtual = conta.Saldo });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        // Rota POST: Sacar dinheiro
+        [HttpPost("{id}/sacar")]
+        public IActionResult Sacar(Guid id, [FromBody] decimal valor)
+        {
+            var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
+            
+            if (conta == null)
+                return NotFound("Conta não localizada no sistema.");
+
+            try
+            {
+                conta.Sacar(valor);
+                return Ok(new { mensagem = "Saque autorizado!", saldoAtual = conta.Saldo });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        // Rota GET: Buscar conta por CPF (Área Administrativa)
+        [HttpGet("buscar-por-cpf/{cpf}")]
+        public IActionResult BuscarPorCpf(string cpf)
+        {
+            var conta = _bancoDeDados.FirstOrDefault(c => c.Cpf == cpf);
+            if (conta == null)
+                return NotFound("Nenhuma conta encontrada com este CPF.");
+
+            return Ok(conta);
+        }
+
+        // Rota GET: Buscar conta por Nome (Área Administrativa)
+        [HttpGet("buscar-por-nome/{nome}")]
+        public IActionResult BuscarPorNome(string nome)
+        {
+            var contas = _bancoDeDados.Where(c => c.Titular.Contains(nome, StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            if (!contas.Any())
+                return NotFound("Nenhuma conta encontrada com este nome.");
+
+            return Ok(contas);
+        }
+        // Rota GET: Listar todas as contas cadastradas (Painel Administrativo)
+        [HttpGet]
+        public IActionResult ListarTodas()
+        {
+            return Ok(_bancoDeDados);
         }
     }
-
-    // Rota POST: Sacar dinheiro
-    [HttpPost("{id}/sacar")]
-    public IActionResult Sacar(Guid id, [FromBody] decimal valor)
-    {
-        var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
-        
-        if (conta == null)
-            return NotFound("Conta não localizada no sistema.");
-
-        try
-        {
-            conta.Sacar(valor);
-            return Ok(new { mensagem = "Saque autorizado!", saldoAtual = conta.Saldo });
-        }
-        catch (Exception ex)
-        {
-            // Captura tanto o erro de valor negativo quanto o de saldo insuficiente
-            return BadRequest(ex.Message);
-        }
-    }
-  }
 }

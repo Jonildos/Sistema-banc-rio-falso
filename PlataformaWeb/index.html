@@ -15,12 +15,20 @@
             
             <!-- CARTÃO 1: Abertura de Conta -->
             <div class="card shadow-sm mb-4" id="cartao-abertura">
-                <div class="card-body text-center">
-                    <h3 class="mb-3">Bem-vindo ao Banco Falso</h3>
-                    <div class="input-group mb-3">
+                <div class="card-body">
+                    <h3 class="mb-3 text-center">Bem-vindo ao Banco Falso</h3>
+                    
+                    <div class="mb-3">
+                        <label for="inputNome" class="form-label">Nome Completo</label>
                         <input type="text" id="inputNome" class="form-control" placeholder="Digite seu nome">
-                        <button class="btn btn-primary" id="btnCriar">Abrir Conta</button>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="inputCpf" class="form-label">CPF</label>
+                        <input type="text" id="inputCpf" class="form-control" placeholder="Digite seu CPF">
+                    </div>
+
+                    <button class="btn btn-primary w-100" id="btnCriar">Abrir Conta</button>
                 </div>
             </div>
 
@@ -28,7 +36,9 @@
             <div class="card shadow-sm d-none" id="cartao-painel">
                 <div class="card-body">
                     <h4 class="card-title">Olá, <span id="displayTitular" class="text-primary"></span></h4>
+                    <p class="text-muted small mb-1">CPF: <span id="displayCpf"></span></p>
                     <p class="text-muted small">Chassi: <span id="displayId"></span></p>
+                    
                     <h2 class="display-4 text-success my-4">R$ <span id="displaySaldo">0,00</span></h2>
 
                     <div class="input-group mb-3">
@@ -48,37 +58,47 @@
 </div>
 
 <script>
-    // Variável global para guardar o ID da conta ativa
     let contaAtivaId = ""; 
     const URL_BASE = "http://localhost:5279/api/conta";
 
     // 1. AÇÃO: CRIAR CONTA
     document.getElementById('btnCriar').addEventListener('click', async () => {
-        const nome = document.getElementById('inputNome').value;
-        if (!nome) return alert("Digite um nome!");
+        const titular = document.getElementById('inputNome').value.trim();
+        const cpf = document.getElementById('inputCpf').value.trim();
+
+        if (!titular || !cpf) {
+            return alert("Por favor, preencha o nome e o CPF!");
+        }
 
         try {
-            const resposta = await fetch(`${URL_BASE}/${nome}`, { method: 'POST' });
+            const resposta = await fetch(URL_BASE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titular: titular, cpf: cpf })
+            });
+
+            if (!resposta.ok) {
+                const erroMsg = await resposta.text();
+                return alert("Erro ao criar conta: " + erroMsg);
+            }
+
             const conta = await resposta.json();
             
-            // Salva o chassi gerado
             contaAtivaId = conta.id; 
-            
-            // Atualiza a tela com os dados
             document.getElementById('displayTitular').innerText = conta.titular;
+            document.getElementById('displayCpf').innerText = conta.cpf;
             document.getElementById('displayId').innerText = conta.id;
             document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
             
-            // Esconde o login e mostra o painel
             document.getElementById('cartao-abertura').classList.add('d-none');
             document.getElementById('cartao-painel').classList.remove('d-none');
 
         } catch (erro) {
-            console.error("Erro ao criar conta:", erro);
+            console.error("Erro na comunicação com o servidor:", erro);
         }
     });
 
-    // 2. AÇÃO: DEPOSITAR E SACAR (Função genérica)
+    // 2. AÇÃO: DEPOSITAR E SACAR
     async function processarTransacao(tipo) {
         const valor = parseFloat(document.getElementById('inputValor').value);
         if (!valor || valor <= 0) return alert("Digite um valor válido!");
@@ -87,30 +107,25 @@
             const resposta = await fetch(`${URL_BASE}/${contaAtivaId}/${tipo}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(valor) // Manda o valor no corpo da requisição
+                body: JSON.stringify(valor)
             });
 
-            // Se o C# retornar erro (ex: Saldo insuficiente), o status não será "ok"
             if (!resposta.ok) {
                 const mensagemErro = await resposta.text();
                 return alert("Operação negada: " + mensagemErro);
             }
 
             const resultado = await resposta.json();
-            
-            // Atualiza o saldo gigante na tela
             document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toFixed(2);
-            document.getElementById('inputValor').value = ""; // Limpa o input
+            document.getElementById('inputValor').value = "";
 
         } catch (erro) {
             console.error(`Erro na transação de ${tipo}:`, erro);
         }
     }
 
-    // Vincula os botões às funções
     document.getElementById('btnDepositar').addEventListener('click', () => processarTransacao("depositar"));
     document.getElementById('btnSacar').addEventListener('click', () => processarTransacao("sacar"));
-
 </script>
 </body>
 </html>

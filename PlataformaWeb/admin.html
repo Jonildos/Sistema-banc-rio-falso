@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Banco Falso</title>
+    <!-- Importando o Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Painel do Administrador</h2>
+                <span class="badge bg-success">Sistema Online &bull; Atualização em Tempo Real</span>
+            </div>
+
+            <!-- GRID COM DUAS COLUNAS: Consultas Individuais / Listagem Geral -->
+            <div class="row">
+                
+                <!-- COLUNA DA ESQUERDA: Buscas Específicas -->
+                <div class="col-md-5">
+                    <div class="card bg-secondary text-white shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Pesquisa Direta</h5>
+                            
+                            <!-- Busca por CPF -->
+                            <div class="mb-3">
+                                <label class="form-label small">Buscar por CPF Exato</label>
+                                <div class="input-group">
+                                    <input type="text" id="inputCpfBusca" class="form-control" placeholder="000.000.000-00">
+                                    <button class="btn btn-warning" id="btnBuscarCpf">Buscar</button>
+                                </div>
+                            </div>
+
+                            <!-- Busca por Nome -->
+                            <div class="mb-3">
+                                <label class="form-label small">Buscar por Nome</label>
+                                <div class="input-group">
+                                    <input type="text" id="inputNomeBusca" class="form-control" placeholder="Nome do titular">
+                                    <button class="btn btn-info text-white" id="btnBuscarNome">Buscar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CAIXA DE RESULTADO DA PESQUISA INDIVIDUAL -->
+                    <div class="card bg-secondary text-white shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Resultado da Pesquisa</h5>
+                            <div id="resultadoArea" class="p-3 bg-dark rounded border border-secondary" style="min-height: 120px;">
+                                <p class="text-muted mb-0 small">Nenhuma busca isolada realizada.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUNA DA DIREITA: Listagem Geral em Tempo Real -->
+                <div class="col-md-7">
+                    <div class="card bg-secondary text-white shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title mb-0">Todas as Contas no Sistema</h5>
+                                <button class="btn btn-sm btn-outline-light" onclick="carregarTodasAsContas()">Atualizar Agora</button>
+                            </div>
+                            
+                            <div class="table-responsive bg-dark rounded p-2" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-dark table-striped table-hover mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Titular</th>
+                                            <th>CPF</th>
+                                            <th>Saldo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaUsuarios">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Carregando usuários...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const URL_BASE = "http://localhost:5279/api/conta";
+
+    // FUNÇÃO: Carregar todas as contas para a listagem em tempo real
+    async function carregarTodasAsContas() {
+        try {
+            const resposta = await fetch(URL_BASE);
+            if (!resposta.ok) return;
+
+            const contas = await resposta.json();
+            const tbody = document.getElementById('tabelaUsuarios');
+
+            if (contas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhuma conta cadastrada ainda.</td></tr>`;
+                return;
+            }
+
+            let htmlTabela = "";
+            contas.forEach(c => {
+                htmlTabela += `
+                    <tr>
+                        <td><strong>${c.titular}</strong><br><small class="text-muted" style="font-size: 10px;">ID: ${c.id}</small></td>
+                        <td>${c.cpf}</td>
+                        <td class="text-success font-monospace">R$ ${c.saldo.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = htmlTabela;
+        } catch (erro) {
+            console.error("Erro ao sincronizar contas em tempo real:", erro);
+        }
+    }
+
+    // 1. BUSCAR POR CPF
+    document.getElementById('btnBuscarCpf').addEventListener('click', async () => {
+        const cpf = document.getElementById('inputCpfBusca').value.trim();
+        if (!cpf) return alert("Digite um CPF para buscar!");
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/buscar-por-cpf/${cpf}`);
+            if (!resposta.ok) {
+                const erroMsg = await resposta.text();
+                document.getElementById('resultadoArea').innerHTML = `<p class="text-danger small">${erroMsg}</p>`;
+                return;
+            }
+
+            const conta = await resposta.json();
+            document.getElementById('resultadoArea').innerHTML = `
+                <div class="alert alert-success mb-0 py-2 small">
+                    <strong>Titular:</strong> ${conta.titular}<br>
+                    <strong>CPF:</strong> ${conta.cpf}<br>
+                    <strong>Saldo:</strong> R$ ${conta.saldo.toFixed(2)}
+                </div>
+            `;
+        } catch (erro) {
+            console.error("Erro na busca:", erro);
+        }
+    });
+
+    // 2. BUSCAR POR NOME
+    document.getElementById('btnBuscarNome').addEventListener('click', async () => {
+        const nome = document.getElementById('inputNomeBusca').value.trim();
+        if (!nome) return alert("Digite um nome para buscar!");
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/buscar-por-nome/${nome}`);
+            if (!resposta.ok) {
+                const erroMsg = await resposta.text();
+                document.getElementById('resultadoArea').innerHTML = `<p class="text-danger small">${erroMsg}</p>`;
+                return;
+            }
+
+            const contas = await resposta.json();
+            let htmlResultados = `<small class="text-info">Encontradas ${contas.length} conta(s):</small><hr class="my-1">`;
+            
+            contas.forEach(c => {
+                htmlResultados += `
+                    <div class="mb-1 pb-1 border-bottom border-secondary small">
+                        <strong>${c.titular}</strong> (${c.cpf}) - <span class="text-success">R$ ${c.saldo.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('resultadoArea').innerHTML = htmlResultados;
+        } catch (erro) {
+            console.error("Erro na busca:", erro);
+        }
+    });
+
+    // INICIALIZAÇÃO E TEMPO REAL:
+    // Carrega a tabela assim que a página abre
+    carregarTodasAsContas();
+
+    // Configura o motor de atualização automática: a cada 3 segundos (3000ms), puxa os dados novos do backend
+    setInterval(carregarTodasAsContas, 3000);
+</script>
+</body>
+</html>
