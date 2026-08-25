@@ -1,22 +1,39 @@
+using Sistema_banc_rio_falso.Data;
+using Sistema_banc_rio_falso.Models; 
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Adiciona os controllers e o contexto do banco
 builder.Services.AddControllers();
+builder.Services.AddDbContext<BancoDbContext>();
 
-// 1. A REGRA DO CORS: Ensinamos o cérebro a criar uma política de passe livre
+// Configuração de CORS se necessário...
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("PermitirTudo", policy =>
+    options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()  // Permite qualquer site (no mundo real, colocaríamos só o endereço do FotoPontoCom)
-              .AllowAnyHeader()  // Permite qualquer tipo de dado oculto
-              .AllowAnyMethod(); // Permite POST, GET, PUT, etc.
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
 var app = builder.Build();
 
-// 2. LIGA O CORS: Avisamos o servidor para usar a regra ANTES de abrir as portas
-app.UseCors("PermitirTudo");
+// GARANTE QUE O BANCO DE DADOS SQLite É CRIADO NA INICIALIZAÇÃO
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<BancoDbContext>();
+    dbContext.Database.EnsureCreated();
+    
+    // Cria um Admin padrão se não existir nenhum cadastrado no sistema
+    if (!dbContext.Administradores.Any())
+    {
+        dbContext.Administradores.Add(new Administrador("admin@bancofalso.com", "000.000.000-00", "admin123"));
+        dbContext.SaveChanges();
+    }
+}
 
+app.UseCors("AllowAll");
+app.UseAuthorization();
 app.MapControllers();
+
 app.Run();

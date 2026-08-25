@@ -15,7 +15,10 @@
             
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Painel do Administrador</h2>
-                <span class="badge bg-success">Sistema Online &bull; Auditoria Ativa</span>
+                <div>
+                    <span class="badge bg-success me-2">Sistema Online &bull; Auditoria Ativa</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="fazerLogout()">Sair</button>
+                </div>
             </div>
 
             <!-- GRID COM DUAS COLUNAS: Pesquisa & Detalhes / Listagem Geral -->
@@ -94,7 +97,19 @@
 </div>
 
 <script>
+    // TRAVA DE SEGURANÇA: Se não passou pelo login, expulsa para a tela de login
+    if (sessionStorage.getItem("admin_autenticado") !== "true") {
+        alert("Acesso restrito! Faça o login administrativo primeiro.");
+        window.location.href = "admin-login.html";
+    }
+
     const URL_BASE = "http://localhost:5279/api/conta";
+
+    // FUNÇÃO DE LOGOUT: Limpa a sessão e manda de volta pro login
+    function fazerLogout() {
+        sessionStorage.removeItem("admin_autenticado");
+        window.location.href = "admin-login.html";
+    }
 
     // FUNÇÃO REUTILIZÁVEL: Exibir os detalhes e o extrato de uma conta específica no painel admin
     async function exibirDetalhesConta(conta) {

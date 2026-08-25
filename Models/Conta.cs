@@ -28,7 +28,7 @@ namespace Sistema_banc_rio_falso.Models
 
                 // Se a trava não gritar, o dinheiro simplesmente entra
                 Saldo += valor;
-                Transacoes.Add(new Transacao("Depósito", valor));
+                Transacoes.Add(new Transacao("Depósito", valor, this.Id));
             }
         public void Sacar(decimal valor)
             {
@@ -39,9 +39,9 @@ namespace Sistema_banc_rio_falso.Models
                     throw new InvalidOperationException("Saldo insuficiente para esta transação.");
 
                 Saldo -= valor;
-                
+
                 // REGISTRA NO EXTRATO
-            Transacoes.Add(new Transacao("Saque", valor));
+            Transacoes.Add(new Transacao("Saque", valor, this.Id));
             }
     }
 }
