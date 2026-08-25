@@ -31,6 +31,8 @@ namespace Sistema_banc_rio_falso.Controllers
             public string Cpf { get; set; } = string.Empty;
             public string Senha { get; set; } = string.Empty;
         }
+
+        // DTO para Transferência Bancária via Chave Única
         public class TransferenciaDto
         {
             public string ChaveDestino { get; set; } = string.Empty; 
@@ -71,6 +73,56 @@ namespace Sistema_banc_rio_falso.Controllers
                 return Unauthorized("Credenciais de administrador inválidas.");
 
             return Ok(new { mensagem = "Login administrativo autorizado com sucesso!" });
+        }
+
+        // Rota POST: Transferir saldo via Chave Única (ChavePix)
+        [HttpPost("{id}/transferir")]
+        public IActionResult Transferir(Guid id, [FromBody] TransferenciaDto request)
+        {
+            if (request.Valor <= 0)
+                return BadRequest("O valor da transferência deve ser maior que zero.");
+
+            // 1. Busca a conta de origem (quem envia)
+            var contaOrigem = _context.Contas
+                .Include(c => c.Transacoes)
+                .FirstOrDefault(c => c.Id == id);
+
+            if (contaOrigem == null)
+                return NotFound("Conta de origem não encontrada.");
+
+            // 2. Busca a conta de destino usando a Chave Única (ChavePix) ou o ID
+            var contaDestino = _context.Contas
+                .Include(c => c.Transacoes)
+                .FirstOrDefault(c => c.ChavePix == request.ChaveDestino || c.Id.ToString() == request.ChaveDestino);
+
+            if (contaDestino == null)
+                return NotFound("Conta de destino não localizada com esta chave única.");
+
+            // 3. Impede auto-transferência
+            if (contaOrigem.Id == contaDestino.Id)
+                return BadRequest("Você não pode transferir dinheiro para a sua própria conta.");
+
+            // 4. Valida saldo suficiente
+            if (contaOrigem.Saldo < request.Valor)
+                return BadRequest("Saldo insuficiente para realizar esta transferência.");
+
+            try
+            {
+                // Executa a saída na origem e a entrada no destino
+                contaOrigem.Sacar(request.Valor);
+                contaDestino.Depositar(request.Valor);
+
+                _context.SaveChanges(); // Salva as alterações de ambas as contas no banco SQLite
+
+                return Ok(new { 
+                    mensagem = "Transferência realizada com sucesso!", 
+                    novoSaldoOrigem = contaOrigem.Saldo 
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         // Rota GET: Consultar saldo/dados da conta por ID (incluindo transações do banco)

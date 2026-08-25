@@ -35,8 +35,13 @@
             <!-- CARTÃO 2: Painel de Controle (Invisível no início) -->
             <div class="card shadow-sm d-none" id="cartao-painel">
                 <div class="card-body">
-                    <h4 class="card-title">Olá, <span id="displayTitular" class="text-primary"></span></h4>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h4 class="card-title mb-0">Olá, <span id="displayTitular" class="text-primary"></span></h4>
+                        <button class="btn btn-outline-danger btn-sm" onclick="fazerLogoutCliente()">Sair</button>
+                    </div>
+                    
                     <p class="text-muted small mb-1">CPF: <span id="displayCpf"></span></p>
+                    <p class="text-muted small mb-1">Sua Chave Única: <strong class="text-dark" id="displayChavePix"></strong></p>
                     <p class="text-muted small">Chassi: <span id="displayId"></span></p>
                     
                     <h2 class="display-4 text-success my-4">R$ <span id="displaySaldo">0,00</span></h2>
@@ -46,9 +51,22 @@
                         <input type="number" id="inputValor" class="form-control" placeholder="0.00" step="0.01">
                     </div>
                     
-                    <div class="d-flex gap-2 mb-4">
+                    <div class="d-flex gap-2 mb-3">
                         <button class="btn btn-success w-100" id="btnDepositar">Depositar</button>
                         <button class="btn btn-danger w-100" id="btnSacar">Sacar</button>
+                    </div>
+
+                    <!-- SEÇÃO DE TRANSFERÊNCIA VIA CHAVE ÚNICA -->
+                    <hr class="my-4">
+                    <h5 class="mb-3">Transferência (Chave Única)</h5>
+                    <div class="mb-2">
+                        <label for="inputChaveDestino" class="form-label small text-muted">Chave do Destinatário</label>
+                        <input type="text" id="inputChaveDestino" class="form-control form-control-sm" placeholder="Ex: PIX-ABC12345">
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" id="inputValorTransferencia" class="form-control form-control-sm" placeholder="0.00" step="0.01">
+                        <button class="btn btn-warning btn-sm fw-bold" id="btnTransferir">Enviar</button>
                     </div>
 
                     <!-- SEÇÃO DO EXTRATO BANCÁRIO -->
@@ -79,10 +97,52 @@
 </div>
 
 <script>
-    let contaAtivaId = ""; 
+    // Recupera o ID salvo na sessão do navegador (evita perder o acesso ao dar F5)
+    let contaAtivaId = sessionStorage.getItem("contaAtivaId") || ""; 
     const URL_BASE = "http://localhost:5279/api/conta";
 
-    // 1. AÇÃO: CARREGAR EXTRATO DA CONTA ATIVA
+    // Ao carregar a página, se houver uma sessão ativa, puxa os dados automaticamente do SQLite
+    window.addEventListener('DOMContentLoaded', async () => {
+        if (contaAtivaId) {
+            await carregarDadosContaAtiva();
+        }
+    });
+
+    async function carregarDadosContaAtiva() {
+        try {
+            const resposta = await fetch(`${URL_BASE}/${contaAtivaId}`);
+            if (!resposta.ok) {
+                fazerLogoutCliente();
+                return;
+            }
+
+            const conta = await resposta.json();
+            
+            // Popula os dados na tela
+            document.getElementById('displayTitular').innerText = conta.titular;
+            document.getElementById('displayCpf').innerText = conta.cpf;
+            document.getElementById('displayChavePix').innerText = conta.chavePix;
+            document.getElementById('displayId').innerText = conta.id;
+            document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
+            
+            // Alterna os cartões
+            document.getElementById('cartao-abertura').classList.add('d-none');
+            document.getElementById('cartao-painel').classList.remove('d-none');
+
+            carregarExtrato();
+        } catch (erro) {
+            console.error("Erro ao recuperar sessão da conta:", erro);
+        }
+    }
+
+    function fazerLogoutCliente() {
+        sessionStorage.removeItem("contaAtivaId");
+        contaAtivaId = "";
+        document.getElementById('cartao-abertura').classList.remove('d-none');
+        document.getElementById('cartao-painel').classList.add('d-none');
+    }
+
+    // 1. CARREGAR EXTRATO
     async function carregarExtrato() {
         if (!contaAtivaId) return;
 
@@ -119,7 +179,7 @@
         }
     }
 
-    // 2. AÇÃO: CRIAR CONTA
+    // 2. CRIAR CONTA
     document.getElementById('btnCriar').addEventListener('click', async () => {
         const titular = document.getElementById('inputNome').value.trim();
         const cpf = document.getElementById('inputCpf').value.trim();
@@ -142,28 +202,18 @@
 
             const conta = await resposta.json();
             
-            // Atribui o ID global da sessão
-            contaAtivaId = conta.id; 
+            // Salva o ID no sessionStorage para persistir no F5
+            contaAtivaId = conta.id;
+            sessionStorage.setItem("contaAtivaId", contaAtivaId);
             
-            // Popula os dados na tela
-            document.getElementById('displayTitular').innerText = conta.titular;
-            document.getElementById('displayCpf').innerText = conta.cpf;
-            document.getElementById('displayId').innerText = conta.id;
-            document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
-            
-            // Alterna a visualização dos cartões
-            document.getElementById('cartao-abertura').classList.add('d-none');
-            document.getElementById('cartao-painel').classList.remove('d-none');
-
-            // Carrega o extrato inicial (vazio)
-            carregarExtrato();
+            await carregarDadosContaAtiva();
 
         } catch (erro) {
             console.error("Erro na comunicação com o servidor:", erro);
         }
     });
 
-    // 3. AÇÃO: PROCESSAR TRANSAÇÕES (DEPOSITAR / SACAR)
+    // 3. PROCESSAR TRANSAÇÕES (DEPOSITAR / SACAR)
     async function processarTransacao(tipo) {
         const valor = parseFloat(document.getElementById('inputValor').value);
         if (!valor || valor <= 0) return alert("Digite um valor válido!");
@@ -182,11 +232,9 @@
 
             const resultado = await resposta.json();
             
-            // Atualiza o saldo e limpa o input
             document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toFixed(2);
             document.getElementById('inputValor').value = "";
 
-            // Atualiza o extrato imediatamente após a resposta da transação
             carregarExtrato();
 
         } catch (erro) {
@@ -194,7 +242,41 @@
         }
     }
 
-    // Vincula os botões de ação financeira
+    // 4. TRANSFERIR VIA CHAVE ÚNICA
+    document.getElementById('btnTransferir').addEventListener('click', async () => {
+        const chaveDestino = document.getElementById('inputChaveDestino').value.trim();
+        const valor = parseFloat(document.getElementById('inputValorTransferencia').value);
+
+        if (!chaveDestino || !valor || valor <= 0) {
+            return alert("Preencha a chave de destino e um valor válido!");
+        }
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/${contaAtivaId}/transferir`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chaveDestino: chaveDestino, valor: valor })
+            });
+
+            if (!resposta.ok) {
+                const erroMsg = await resposta.text();
+                return alert("Falha na transferência: " + erroMsg);
+            }
+
+            const resultado = await resposta.json();
+            
+            document.getElementById('displaySaldo').innerText = resultado.novoSaldoOrigem.toFixed(2);
+            document.getElementById('inputChaveDestino').value = "";
+            document.getElementById('inputValorTransferencia').value = "";
+
+            alert("Transferência efetuada com sucesso!");
+            carregarExtrato();
+
+        } catch (erro) {
+            console.error("Erro na transferência:", erro);
+        }
+    });
+
     document.getElementById('btnDepositar').addEventListener('click', () => processarTransacao("depositar"));
     document.getElementById('btnSacar').addEventListener('click', () => processarTransacao("sacar"));
 </script>

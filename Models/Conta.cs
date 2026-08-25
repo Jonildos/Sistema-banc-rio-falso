@@ -6,9 +6,10 @@ namespace Sistema_banc_rio_falso.Models
         public Guid Id {get; private set; }
         public string Titular {get; private set; }
         public string Cpf { get; private set; } = string.Empty;
+        public string ChavePix { get; private set; } = string.Empty;
         public decimal Saldo {get; private set; }
-
         public List<Transacao> Transacoes { get; private set; } = new List<Transacao>();
+        
 
         // Construtor (como a conta nasce)
         public Conta(string titular, string cpf)
@@ -17,6 +18,7 @@ namespace Sistema_banc_rio_falso.Models
                 Titular = titular;
                 Cpf = cpf;
                 Saldo = 0; //conta nasce zerada
+                ChavePix = "PIX-" + Id.ToString().Substring(0, 8).ToUpper();
             }
 
         //comportamentos (regras de negócio isoladas)
