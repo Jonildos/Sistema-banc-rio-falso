@@ -8,13 +8,15 @@ namespace Sistema_banc_rio_falso.Models
         public string Cpf { get; private set; } = string.Empty;
         public decimal Saldo {get; private set; }
 
+        public List<Transacao> Transacoes { get; private set; } = new List<Transacao>();
+
         // Construtor (como a conta nasce)
         public Conta(string titular, string cpf)
             {
                 Id = Guid.NewGuid(); //gera um id único no formato universal
                 Titular = titular;
                 Cpf = cpf;
-                Saldo = 0; //toda conta nasce zerada
+                Saldo = 0; //conta nasce zerada
             }
 
         //comportamentos (regras de negócio isoladas)
@@ -26,6 +28,7 @@ namespace Sistema_banc_rio_falso.Models
 
                 // Se a trava não gritar, o dinheiro simplesmente entra
                 Saldo += valor;
+                Transacoes.Add(new Transacao("Depósito", valor));
             }
         public void Sacar(decimal valor)
             {
@@ -36,6 +39,9 @@ namespace Sistema_banc_rio_falso.Models
                     throw new InvalidOperationException("Saldo insuficiente para esta transação.");
 
                 Saldo -= valor;
+                
+                // REGISTRA NO EXTRATO
+            Transacoes.Add(new Transacao("Saque", valor));
             }
     }
 }

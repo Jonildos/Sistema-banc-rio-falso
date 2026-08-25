@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Bancário</title>
+    <title>Painel Bancário - Portal do Cliente</title>
     <!-- Importando o Bootstrap direto da nuvem (CDN) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -46,10 +46,31 @@
                         <input type="number" id="inputValor" class="form-control" placeholder="0.00" step="0.01">
                     </div>
                     
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 mb-4">
                         <button class="btn btn-success w-100" id="btnDepositar">Depositar</button>
                         <button class="btn btn-danger w-100" id="btnSacar">Sacar</button>
                     </div>
+
+                    <!-- SEÇÃO DO EXTRATO BANCÁRIO -->
+                    <hr>
+                    <h5 class="mb-3">Extrato de Movimentações</h5>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Tipo</th>
+                                    <th class="text-end">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaExtrato">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Nenhuma movimentação ainda.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </div>
             </div>
 
@@ -61,7 +82,44 @@
     let contaAtivaId = ""; 
     const URL_BASE = "http://localhost:5279/api/conta";
 
-    // 1. AÇÃO: CRIAR CONTA
+    // 1. AÇÃO: CARREGAR EXTRATO DA CONTA ATIVA
+    async function carregarExtrato() {
+        if (!contaAtivaId) return;
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/${contaAtivaId}/extrato`);
+            if (!resposta.ok) return;
+
+            const transacoes = await resposta.json();
+            const tbody = document.getElementById('tabelaExtrato');
+
+            if (transacoes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhuma movimentação ainda.</td></tr>`;
+                return;
+            }
+
+            let htmlExtrato = "";
+            transacoes.forEach(t => {
+                const dataFormatada = new Date(t.dataHora).toLocaleString('pt-BR');
+                const corValor = t.tipo === "Depósito" ? "text-success" : "text-danger";
+                const sinal = t.tipo === "Depósito" ? "+" : "-";
+
+                htmlExtrato += `
+                    <tr>
+                        <td class="small text-muted">${dataFormatada}</td>
+                        <td><span class="badge bg-${t.tipo === 'Depósito' ? 'success' : 'danger'}">${t.tipo}</span></td>
+                        <td class="text-end font-monospace ${corValor}">${sinal} R$ ${t.valor.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = htmlExtrato;
+        } catch (erro) {
+            console.error("Erro ao carregar extrato:", erro);
+        }
+    }
+
+    // 2. AÇÃO: CRIAR CONTA
     document.getElementById('btnCriar').addEventListener('click', async () => {
         const titular = document.getElementById('inputNome').value.trim();
         const cpf = document.getElementById('inputCpf').value.trim();
@@ -84,21 +142,28 @@
 
             const conta = await resposta.json();
             
+            // Atribui o ID global da sessão
             contaAtivaId = conta.id; 
+            
+            // Popula os dados na tela
             document.getElementById('displayTitular').innerText = conta.titular;
             document.getElementById('displayCpf').innerText = conta.cpf;
             document.getElementById('displayId').innerText = conta.id;
             document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
             
+            // Alterna a visualização dos cartões
             document.getElementById('cartao-abertura').classList.add('d-none');
             document.getElementById('cartao-painel').classList.remove('d-none');
+
+            // Carrega o extrato inicial (vazio)
+            carregarExtrato();
 
         } catch (erro) {
             console.error("Erro na comunicação com o servidor:", erro);
         }
     });
 
-    // 2. AÇÃO: DEPOSITAR E SACAR
+    // 3. AÇÃO: PROCESSAR TRANSAÇÕES (DEPOSITAR / SACAR)
     async function processarTransacao(tipo) {
         const valor = parseFloat(document.getElementById('inputValor').value);
         if (!valor || valor <= 0) return alert("Digite um valor válido!");
@@ -116,14 +181,20 @@
             }
 
             const resultado = await resposta.json();
+            
+            // Atualiza o saldo e limpa o input
             document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toFixed(2);
             document.getElementById('inputValor').value = "";
+
+            // Atualiza o extrato imediatamente após a resposta da transação
+            carregarExtrato();
 
         } catch (erro) {
             console.error(`Erro na transação de ${tipo}:`, erro);
         }
     }
 
+    // Vincula os botões de ação financeira
     document.getElementById('btnDepositar').addEventListener('click', () => processarTransacao("depositar"));
     document.getElementById('btnSacar').addEventListener('click', () => processarTransacao("sacar"));
 </script>

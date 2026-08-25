@@ -11,17 +11,17 @@
 
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-11">
             
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Painel do Administrador</h2>
-                <span class="badge bg-success">Sistema Online &bull; Atualização em Tempo Real</span>
+                <span class="badge bg-success">Sistema Online &bull; Auditoria Ativa</span>
             </div>
 
-            <!-- GRID COM DUAS COLUNAS: Consultas Individuais / Listagem Geral -->
+            <!-- GRID COM DUAS COLUNAS: Pesquisa & Detalhes / Listagem Geral -->
             <div class="row">
                 
-                <!-- COLUNA DA ESQUERDA: Buscas Específicas -->
+                <!-- COLUNA DA ESQUERDA: Pesquisas e Detalhes da Conta Selecionada -->
                 <div class="col-md-5">
                     <div class="card bg-secondary text-white shadow-sm mb-4">
                         <div class="card-body">
@@ -47,12 +47,12 @@
                         </div>
                     </div>
 
-                    <!-- CAIXA DE RESULTADO DA PESQUISA INDIVIDUAL -->
+                    <!-- CAIXA DE RESULTADO E EXTRATO DA CONTA SELECIONADA -->
                     <div class="card bg-secondary text-white shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title mb-3">Resultado da Pesquisa</h5>
-                            <div id="resultadoArea" class="p-3 bg-dark rounded border border-secondary" style="min-height: 120px;">
-                                <p class="text-muted mb-0 small">Nenhuma busca isolada realizada.</p>
+                            <h5 class="card-title mb-3">Auditoria da Conta</h5>
+                            <div id="resultadoArea" class="p-3 bg-dark rounded border border-secondary" style="min-height: 250px;">
+                                <p class="text-muted mb-0 small">Nenhuma conta selecionada. Utilize os filtros acima ou clique em uma conta da lista ao lado.</p>
                             </div>
                         </div>
                     </div>
@@ -67,13 +67,13 @@
                                 <button class="btn btn-sm btn-outline-light" onclick="carregarTodasAsContas()">Atualizar Agora</button>
                             </div>
                             
-                            <div class="table-responsive bg-dark rounded p-2" style="max-height: 400px; overflow-y: auto;">
+                            <div class="table-responsive bg-dark rounded p-2" style="max-height: 480px; overflow-y: auto;">
                                 <table class="table table-dark table-striped table-hover mb-0 align-middle">
                                     <thead>
                                         <tr>
-                                            <th>Titular</th>
-                                            <th>CPF</th>
+                                            <th>Titular / CPF</th>
                                             <th>Saldo</th>
+                                            <th class="text-end">Ação</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabelaUsuarios">
@@ -96,7 +96,55 @@
 <script>
     const URL_BASE = "http://localhost:5279/api/conta";
 
-    // FUNÇÃO: Carregar todas as contas para a listagem em tempo real
+    // FUNÇÃO REUTILIZÁVEL: Exibir os detalhes e o extrato de uma conta específica no painel admin
+    async function exibirDetalhesConta(conta) {
+        try {
+            // Puxa o extrato atualizado desta conta na API
+            const respostaExtrato = await fetch(`${URL_BASE}/${conta.id}/extrato`);
+            const transacoes = respostaExtrato.ok ? await respostaExtrato.json() : [];
+
+            let htmlTransacoes = "";
+            if (transacoes.length === 0) {
+                htmlTransacoes = `<tr><td colspan="3" class="text-center text-muted small">Nenhuma movimentação registrada.</td></tr>`;
+            } else {
+                transacoes.forEach(t => {
+                    const dataFormatada = new Date(t.dataHora).toLocaleString('pt-BR');
+                    const corValor = t.tipo === "Depósito" ? "text-success" : "text-danger";
+                    const sinal = t.tipo === "Depósito" ? "+" : "-";
+                    htmlTransacoes += `
+                        <tr>
+                            <td class="text-muted" style="font-size: 11px;">${dataFormatada}</td>
+                            <td><span class="badge bg-${t.tipo === 'Depósito' ? 'success' : 'danger'}" style="font-size: 10px;">${t.tipo}</span></td>
+                            <td class="text-end font-monospace ${corValor}" style="font-size: 12px;">${sinal} R$ ${t.valor.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Monta o card de auditoria com os dados da conta e a tabela de extrato
+            document.getElementById('resultadoArea').innerHTML = `
+                <div class="mb-3">
+                    <h6 class="text-success mb-1">${conta.titular}</h6>
+                    <p class="mb-1 small text-light"><strong>CPF:</strong> ${conta.cpf}</p>
+                    <p class="mb-1 small text-muted"><strong>ID:</strong> ${conta.id}</p>
+                    <p class="mb-2 small"><strong>Saldo Atual:</strong> <span class="text-success fs-6 fw-bold">R$ ${conta.saldo.toFixed(2)}</span></p>
+                </div>
+                <hr class="border-secondary my-2">
+                <h6 class="small text-warning mb-2">Extrato de Movimentações:</h6>
+                <div class="table-responsive" style="max-height: 150px; overflow-y: auto;">
+                    <table class="table table-dark table-sm mb-0 align-middle">
+                        <tbody>
+                            ${htmlTransacoes}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } catch (erro) {
+            console.error("Erro ao carregar detalhes da conta:", erro);
+        }
+    }
+
+    // FUNÇÃO: Carregar todas as contas na tabela da direita
     async function carregarTodasAsContas() {
         try {
             const resposta = await fetch(URL_BASE);
@@ -114,16 +162,21 @@
             contas.forEach(c => {
                 htmlTabela += `
                     <tr>
-                        <td><strong>${c.titular}</strong><br><small class="text-muted" style="font-size: 10px;">ID: ${c.id}</small></td>
-                        <td>${c.cpf}</td>
+                        <td>
+                            <strong>${c.titular}</strong><br>
+                            <small class="text-muted">${c.cpf}</small>
+                        </td>
                         <td class="text-success font-monospace">R$ ${c.saldo.toFixed(2)}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-warning" onclick='exibirDetalhesConta(${JSON.stringify(c)})'>Auditar</button>
+                        </td>
                     </tr>
                 `;
             });
 
             tbody.innerHTML = htmlTabela;
         } catch (erro) {
-            console.error("Erro ao sincronizar contas em tempo real:", erro);
+            console.error("Erro ao sincronizar contas:", erro);
         }
     }
 
@@ -141,13 +194,7 @@
             }
 
             const conta = await resposta.json();
-            document.getElementById('resultadoArea').innerHTML = `
-                <div class="alert alert-success mb-0 py-2 small">
-                    <strong>Titular:</strong> ${conta.titular}<br>
-                    <strong>CPF:</strong> ${conta.cpf}<br>
-                    <strong>Saldo:</strong> R$ ${conta.saldo.toFixed(2)}
-                </div>
-            `;
+            exibirDetalhesConta(conta);
         } catch (erro) {
             console.error("Erro na busca:", erro);
         }
@@ -167,12 +214,17 @@
             }
 
             const contas = await resposta.json();
-            let htmlResultados = `<small class="text-info">Encontradas ${contas.length} conta(s):</small><hr class="my-1">`;
-            
+            if (contas.length === 1) {
+                exibirDetalhesConta(contas[0]);
+                return;
+            }
+
+            let htmlResultados = `<small class="text-info">Encontradas ${contas.length} contas. Clique em "Auditar" na tabela ao lado ou selecione:</small><hr class="my-1">`;
             contas.forEach(c => {
                 htmlResultados += `
-                    <div class="mb-1 pb-1 border-bottom border-secondary small">
-                        <strong>${c.titular}</strong> (${c.cpf}) - <span class="text-success">R$ ${c.saldo.toFixed(2)}</span>
+                    <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom border-secondary small">
+                        <span><strong>${c.titular}</strong> (${c.cpf})</span>
+                        <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 11px;" onclick='exibirDetalhesConta(${JSON.stringify(c)})'>Ver</button>
                     </div>
                 `;
             });
@@ -183,11 +235,8 @@
         }
     });
 
-    // INICIALIZAÇÃO E TEMPO REAL:
-    // Carrega a tabela assim que a página abre
+    // Inicializa a listagem geral e ativa o tempo real (a cada 3 segundos)
     carregarTodasAsContas();
-
-    // Configura o motor de atualização automática: a cada 3 segundos (3000ms), puxa os dados novos do backend
     setInterval(carregarTodasAsContas, 3000);
 </script>
 </body>

@@ -38,6 +38,16 @@ namespace Sistema_banc_rio_falso.Controllers
 
             return Ok(conta);
         }
+        //Rota GET: Consultar extrato de uma conta pelo ID
+        [HttpGet("{id}/extrato")]
+        public IActionResult ConsultarExtrato(Guid id)
+        {
+            var conta = _bancoDeDados.FirstOrDefault(c => c.Id == id);
+            if (conta == null)
+                return NotFound("Conta não encontrada no sistema.");
+
+            return Ok(conta.Transacoes);
+        }
 
         // Rota POST: Depositar dinheiro
         [HttpPost("{id}/depositar")]
