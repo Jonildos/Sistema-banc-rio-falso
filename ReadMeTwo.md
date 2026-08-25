@@ -1,2 +1,0 @@
-# Arquivo secundário
-- Teste.
