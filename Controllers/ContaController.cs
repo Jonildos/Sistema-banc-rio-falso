@@ -31,6 +31,11 @@ namespace Sistema_banc_rio_falso.Controllers
             public string Cpf { get; set; } = string.Empty;
             public string Senha { get; set; } = string.Empty;
         }
+        public class TransferenciaDto
+        {
+            public string ChaveDestino { get; set; } = string.Empty; 
+            public decimal Valor { get; set; }
+        }
 
         // Rota POST: Criar conta (Com validação de CPF duplicado no banco)
         [HttpPost]
