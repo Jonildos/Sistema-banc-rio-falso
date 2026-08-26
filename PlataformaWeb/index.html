@@ -3,28 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Bancário - Portal do Cliente</title>
-    <!-- Importando o Bootstrap direto da nuvem (CDN) -->
+    <title>Banco Falso - Portal do Cliente</title>
+    <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Ícones opcionais para dar cara de App Nativo -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            border: none;
+            border-radius: 1rem;
+        }
+        .bg-banking-header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            border-radius: 1rem 1rem 0 0 !important;
+        }
+        .font-mono {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-xl-9 col-lg-10">
             
             <!-- CARTÃO 1: Autenticação (Login ou Abertura de Conta) -->
-            <div class="card shadow-sm mb-4" id="cartao-autenticacao">
-                <div class="card-body">
-                    <h3 class="mb-3 text-center">Banco Falso</h3>
+            <div class="card shadow-lg mb-4" id="cartao-autenticacao">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-dark"><i class="fa-solid fa-building-columns text-primary me-2"></i>Banco Falso</h2>
+                        <p class="text-muted">A sua experiência digital sem atritos</p>
+                    </div>
                     
                     <!-- Abas de navegação -->
-                    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+                    <ul class="nav nav-pills nav-fill mb-4 bg-light p-1 rounded-pill" id="pills-tab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab-login" data-bs-toggle="pill" data-bs-target="#div-login" type="button">Entrar</button>
+                            <button class="nav-link active rounded-pill fw-semibold" id="tab-login" data-bs-toggle="pill" data-bs-target="#div-login" type="button">Entrar</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-cadastro" data-bs-toggle="pill" data-bs-target="#div-cadastro" type="button">Abrir Conta</button>
+                            <button class="nav-link rounded-pill fw-semibold" id="tab-cadastro" data-bs-toggle="pill" data-bs-target="#div-cadastro" type="button">Abrir Conta</button>
                         </li>
                     </ul>
 
@@ -33,113 +56,163 @@
                         <!-- ABA 1: LOGIN -->
                         <div class="tab-pane fade show active" id="div-login" role="tabpanel">
                             <div class="mb-3">
-                                <label for="inputLoginCpf" class="form-label">CPF ou Chave Única</label>
-                                <input type="text" id="inputLoginCpf" class="form-control" placeholder="000.000.000-00 ou PIX-...">
+                                <label for="inputLoginCpf" class="form-label text-muted small fw-bold">CPF ou Chave Única (Pix)</label>
+                                <input type="text" id="inputLoginCpf" class="form-control form-control-lg bg-light" placeholder="000.000.000-00 ou PIX-...">
                             </div>
-                            <div class="mb-3">
-                                <label for="inputLoginSenha" class="form-label">Senha</label>
-                                <input type="password" id="inputLoginSenha" class="form-control" placeholder="Sua senha">
+                            <div class="mb-4">
+                                <label for="inputLoginSenha" class="form-label text-muted small fw-bold">Senha</label>
+                                <input type="password" id="inputLoginSenha" class="form-control form-control-lg bg-light" placeholder="Sua senha de acesso">
                             </div>
-                            <button class="btn btn-success w-100" id="btnEntrar">Acessar Conta</button>
+                            <button class="btn btn-primary btn-lg w-100 fw-semibold shadow-sm" id="btnEntrar">Acessar Conta</button>
                         </div>
 
                         <!-- ABA 2: CADASTRO -->
                         <div class="tab-pane fade" id="div-cadastro" role="tabpanel">
                             <div class="mb-3">
-                                <label for="inputNome" class="form-label">Nome Completo</label>
-                                <input type="text" id="inputNome" class="form-control" placeholder="Digite seu nome">
+                                <label for="inputNome" class="form-label text-muted small fw-bold">Nome Completo</label>
+                                <input type="text" id="inputNome" class="form-control bg-light" placeholder="Digite seu nome">
                             </div>
-
                             <div class="mb-3">
-                                <label for="inputCpf" class="form-label">CPF</label>
-                                <input type="text" id="inputCpf" class="form-control" placeholder="Digite seu CPF">
+                                <label for="inputCpf" class="form-label text-muted small fw-bold">CPF</label>
+                                <input type="text" id="inputCpf" class="form-control bg-light" placeholder="Apenas números ou formatado">
                             </div>
-
-                            <div class="mb-3">
-                                <label for="inputSenha" class="form-label">Senha de Acesso</label>
-                                <input type="password" id="inputSenha" class="form-control" placeholder="Crie uma senha">
+                            <div class="mb-4">
+                                <label for="inputSenha" class="form-label text-muted small fw-bold">Senha de Acesso</label>
+                                <input type="password" id="inputSenha" class="form-control bg-light" placeholder="Crie uma senha segura">
                             </div>
-
-                            <button class="btn btn-primary w-100" id="btnCriar">Abrir Conta</button>
+                            <button class="btn btn-success btn-lg w-100 fw-semibold shadow-sm" id="btnCriar">Criar Conta Gratuitamente</button>
                         </div>
 
                     </div>
                 </div>
             </div>
 
-            <!-- CARTÃO 2: Painel de Controle (Invisível no início) -->
-            <div class="card shadow-sm d-none" id="cartao-painel">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h4 class="card-title mb-0">Olá, <span id="displayTitular" class="text-primary"></span></h4>
-                        <button class="btn btn-outline-danger btn-sm" onclick="fazerLogoutCliente()">Sair</button>
+            <!-- CARTÃO 2: Painel Principal do Cliente (Invisível no início) -->
+            <div class="card shadow-lg d-none" id="cartao-painel">
+                
+                <!-- Cabeçalho do Banco -->
+                <div class="card-header bg-banking-header p-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-primary bg-opacity-25 text-primary mb-1 border border-primary border-opacity-50">Conta Corrente</span>
+                        <h3 class="mb-0 fw-bold">Olá, <span id="displayTitular"></span></h3>
                     </div>
-                    
-                    <p class="text-muted small mb-1">CPF: <span id="displayCpf"></span></p>
-                    <p class="text-muted small mb-1">Sua Chave Única: <strong class="text-dark" id="displayChavePix"></strong></p>
-                    <p class="text-muted small">Chassi: <span id="displayId"></span></p>
-                    
-                    <h2 class="display-4 text-success my-4">R$ <span id="displaySaldo">0,00</span></h2>
+                    <button class="btn btn-outline-light btn-sm px-3 rounded-pill" onclick="fazerLogoutCliente()">
+                        <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Sair
+                    </button>
+                </div>
 
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">R$</span>
-                        <input type="number" id="inputValor" class="form-control" placeholder="0.00" step="0.01">
-                    </div>
+                <div class="card-body p-4 p-lg-5">
                     
-                    <div class="d-flex gap-2 mb-3">
-                        <button class="btn btn-success w-100" id="btnDepositar">Depositar</button>
-                        <button class="btn btn-danger w-100" id="btnSacar">Sacar</button>
-                    </div>
+                    <!-- Grid Nativo de Banco: Esquerda (Saldo/Ações) | Direita (Extrato) -->
+                    <div class="row g-4">
+                        
+                        <!-- COLUNA ESQUERDA: Saldo, Ações Rápidas e Área Pix -->
+                        <div class="col-lg-6 d-flex flex-column justify-content-between border-end-lg pe-lg-4">
+                            <div>
+                                <!-- Informações da Conta -->
+                                <div class="bg-light p-3 rounded-3 mb-4 border">
+                                    <div class="d-flex justify-content-between text-muted small mb-1">
+                                        <span>CPF: <strong id="displayCpf" class="text-dark"></strong></span>
+                                        <span>Chassi: <strong id="displayId" class="text-dark text-truncate" style="max-width: 90px;"></strong></span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        Chave Pix (Única): <strong class="text-primary font-mono" id="displayChavePix"></strong>
+                                    </div>
+                                </div>
 
-                    <!-- SEÇÃO DE TRANSFERÊNCIA VIA CHAVE ÚNICA -->
-                    <hr class="my-4">
-                    <h5 class="mb-3">Transferência (Chave Única)</h5>
-                    <div class="mb-2">
-                        <label for="inputChaveDestino" class="form-label small text-muted">Chave do Destinatário</label>
-                        <input type="text" id="inputChaveDestino" class="form-control form-control-sm" placeholder="Ex: PIX-ABC12345">
-                    </div>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">R$</span>
-                        <input type="number" id="inputValorTransferencia" class="form-control form-control-sm" placeholder="0.00" step="0.01">
-                        <button class="btn btn-warning btn-sm fw-bold" id="btnTransferir">Enviar</button>
-                    </div>
+                                <!-- Display de Saldo -->
+                                <div class="mb-4">
+                                    <span class="text-muted small text-uppercase fw-bold tracking-wider">Saldo Disponível</span>
+                                    <div class="display-5 fw-bold text-success mt-1">
+                                        R$ <span id="displaySaldo">0,00</span>
+                                    </div>
+                                </div>
 
-                    <!-- SEÇÃO DO EXTRATO BANCÁRIO -->
-                    <hr>
-                    <h5 class="mb-3">Extrato de Movimentações</h5>
-                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                        <table class="table table-sm table-striped align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Data / Hora</th>
-                                    <th>Tipo</th>
-                                    <th class="text-end">Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabelaExtrato">
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted">Nenhuma movimentação ainda.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                <!-- Ações Rápidas: Depositar / Sacar -->
+                                <div class="card bg-light border p-3 mb-4">
+                                    <label for="inputValor" class="form-label small fw-bold text-muted">Valor da Operação (R$)</label>
+                                    <div class="input-group mb-3">
+                                        <span class="input-group-text bg-white border-end-0">R$</span>
+                                        <input type="number" id="inputValor" class="form-control border-start-0 ps-0" placeholder="0,00" step="0.01">
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <button class="btn btn-outline-success w-100 fw-semibold" id="btnDepositar">
+                                                <i class="fa-solid fa-plus me-1"></i> Depositar
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button class="btn btn-outline-danger w-100 fw-semibold" id="btnSacar">
+                                                <i class="fa-solid fa-minus me-1"></i> Sacar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SEÇÃO DE TRANSFERÊNCIA / PIX -->
+                            <div class="card bg-white border shadow-sm p-3">
+                                <h6 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-paper-plane text-warning me-2"></i>Área Pix / Transferência</h6>
+                                <div class="mb-2">
+                                    <label for="inputChaveDestino" class="form-label small text-muted">Chave Pix do Destinatário</label>
+                                    <input type="text" id="inputChaveDestino" class="form-control form-control-sm bg-light font-mono" placeholder="Ex: PIX-ABC12345">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="inputValorTransferencia" class="form-label small text-muted">Valor</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="number" id="inputValorTransferencia" class="form-control" placeholder="0,00" step="0.01">
+                                    </div>
+                                </div>
+                                <button class="btn btn-warning w-100 btn-sm fw-bold text-dark shadow-sm" id="btnTransferir">
+                                    Transferir Agora
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- COLUNA DIREITA: Extrato Bancário Completo -->
+                        <div class="col-lg-6 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-receipt text-secondary me-2"></i>Extrato</h5>
+                                <button class="btn btn-link btn-sm text-decoration-none p-0 text-muted" onclick="carregarExtrato()">
+                                    <i class="fa-solid fa-rotate-right"></i> Atualizar
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive flex-grow-1 border rounded-3 bg-white shadow-sm" style="max-height: 480px; min-height: 300px; overflow-y: auto;">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th class="ps-3">Data / Hora</th>
+                                            <th>Tipo</th>
+                                            <th class="text-end pe-3">Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaExtrato">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">Carregando movimentações...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div> <!-- Fim da Row Principal -->
 
                 </div>
-            </div>
+            </div> <!-- Fim do Cartão Painel -->
 
         </div>
     </div>
 </div>
 
-<!-- Importando o JS do Bootstrap (necessário para as abas funcionarem) -->
+<!-- Bootstrap JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Recupera o ID salvo na sessão do navegador (evita perder o acesso ao dar F5)
     let contaAtivaId = sessionStorage.getItem("contaAtivaId") || ""; 
     const URL_BASE = "http://localhost:5279/api/conta";
 
-    // Ao carregar a página, se houver uma sessão ativa, puxa os dados automaticamente do SQLite
     window.addEventListener('DOMContentLoaded', async () => {
         if (contaAtivaId) {
             await carregarDadosContaAtiva();
@@ -156,14 +229,12 @@
 
             const conta = await resposta.json();
             
-            // Popula os dados na tela
             document.getElementById('displayTitular').innerText = conta.titular;
             document.getElementById('displayCpf').innerText = conta.cpf;
             document.getElementById('displayChavePix').innerText = conta.chavePix;
             document.getElementById('displayId').innerText = conta.id;
-            document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
+            document.getElementById('displaySaldo').innerText = conta.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             
-            // Alterna os cartões
             document.getElementById('cartao-autenticacao').classList.add('d-none');
             document.getElementById('cartao-painel').classList.remove('d-none');
 
@@ -192,7 +263,7 @@
             const tbody = document.getElementById('tabelaExtrato');
 
             if (transacoes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhuma movimentação ainda.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Nenhuma movimentação registrada.</td></tr>`;
                 return;
             }
 
@@ -205,9 +276,9 @@
 
                 htmlExtrato += `
                     <tr>
-                        <td class="small text-muted">${dataFormatada}</td>
-                        <td><span class="badge bg-${t.tipo === 1 ? 'success' : 'danger'}">${nomeTipo}</span></td>
-                        <td class="text-end font-monospace ${corValor}">${sinal} R$ ${t.valor.toFixed(2)}</td>
+                        <td class="ps-3 small text-muted">${dataFormatada}</td>
+                        <td><span class="badge bg-${t.tipo === 1 ? 'success' : (t.tipo === 2 ? 'danger' : 'warning text-dark')}">${nomeTipo}</span></td>
+                        <td class="text-end pe-3 font-mono fw-semibold ${corValor}">${sinal} R$ ${t.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                     </tr>
                 `;
             });
@@ -241,10 +312,8 @@
             }
 
             const conta = await resposta.json();
-            
             contaAtivaId = conta.id;
             sessionStorage.setItem("contaAtivaId", contaAtivaId);
-            
             await carregarDadosContaAtiva();
 
         } catch (erro) {
@@ -274,10 +343,8 @@
             }
 
             const conta = await resposta.json();
-            
             contaAtivaId = conta.id;
             sessionStorage.setItem("contaAtivaId", contaAtivaId);
-            
             await carregarDadosContaAtiva();
 
         } catch (erro) {
@@ -303,10 +370,8 @@
             }
 
             const resultado = await resposta.json();
-            
-            document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toFixed(2);
+            document.getElementById('displaySaldo').innerText = resultado.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('inputValor').value = "";
-
             carregarExtrato();
 
         } catch (erro) {
@@ -314,7 +379,7 @@
         }
     }
 
-    // 5. TRANSFERIR VIA CHAVE ÚNICA
+    // 5. TRANSFERIR VIA CHAVE ÚNICA (PIX)
     document.getElementById('btnTransferir').addEventListener('click', async () => {
         const chaveDestino = document.getElementById('inputChaveDestino').value.trim();
         const valor = parseFloat(document.getElementById('inputValorTransferencia').value);
@@ -336,8 +401,7 @@
             }
 
             const resultado = await resposta.json();
-            
-            document.getElementById('displaySaldo').innerText = resultado.novoSaldoOrigem.toFixed(2);
+            document.getElementById('displaySaldo').innerText = resultado.novoSaldoOrigem.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('inputChaveDestino').value = "";
             document.getElementById('inputValorTransferencia').value = "";
 
