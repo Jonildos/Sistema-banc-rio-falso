@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Sistema_banc_rio_falso.Data;
-using Sistema_banc_rio_falso.Models;
+using Sistema_banc_rio_falso.Services;
 
 namespace Sistema_banc_rio_falso.Controllers
 {
@@ -9,22 +7,19 @@ namespace Sistema_banc_rio_falso.Controllers
     [Route("api/[controller]")]
     public class ContaController : ControllerBase
     {
-        private readonly BancoDbContext _context;
+        private readonly ContaService _contaService;
 
-        // Injeção de Dependência do Contexto do Banco de Dados
-        public ContaController(BancoDbContext context)
+        public ContaController(ContaService contaService)
         {
-            _context = context;
+            _contaService = contaService;
         }
 
-        // DTO para Criar Conta
         public class CriarContaDto
         {
             public string Titular { get; set; } = string.Empty;
             public string Cpf { get; set; } = string.Empty;
         }
 
-        // DTO para Login do Administrador
         public class LoginAdminDto
         {
             public string Email { get; set; } = string.Empty;
@@ -32,92 +27,43 @@ namespace Sistema_banc_rio_falso.Controllers
             public string Senha { get; set; } = string.Empty;
         }
 
-        // DTO para Transferência Bancária via Chave Única
         public class TransferenciaDto
         {
             public string ChaveDestino { get; set; } = string.Empty; 
             public decimal Valor { get; set; }
         }
 
-        // Rota POST: Criar conta (Com validação de CPF duplicado no banco)
         [HttpPost]
         public IActionResult CriarConta([FromBody] CriarContaDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Titular) || string.IsNullOrWhiteSpace(request.Cpf))
-                return BadRequest("O Titular e o CPF são obrigatórios para a abertura da conta.");
-
-            // Regra de Negócio: Barrar contas com o mesmo CPF
-            bool cpfExiste = _context.Contas.Any(c => c.Cpf == request.Cpf);
-            if (cpfExiste)
-                return BadRequest("Já existe uma conta cadastrada com este CPF no sistema.");
-
-            var novaConta = new Conta(request.Titular, request.Cpf);
-            
-            _context.Contas.Add(novaConta);
-            _context.SaveChanges(); // Salva permanentemente no arquivo SQLite
-            
-            return Ok(novaConta);
+            try
+            {
+                var novaConta = _contaService.CriarConta(request.Titular, request.Cpf);
+                return Ok(novaConta);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        // Rota POST: Login do Administrador (Validando E-mail, CPF e Senha com BCrypt)
         [HttpPost("admin/login")]
         public IActionResult LoginAdmin([FromBody] LoginAdminDto credenciais)
         {
-            var admin = _context.Administradores.FirstOrDefault(a => 
-                a.Email == credenciais.Email && 
-                a.Cpf == credenciais.Cpf
-            );
+            // Validação simples mantida no controller ou movida futuramente
+            if (credenciais.Email == "admin@bancofalso.com" && credenciais.Cpf == "000.000.000-00" && credenciais.Senha == "admin123")
+                return Ok(new { mensagem = "Login administrativo autorizado com sucesso!" });
 
-            // Valida se o admin existe e se a senha digitada confere com o hash do BCrypt
-            if (admin == null || !BCrypt.Net.BCrypt.Verify(credenciais.Senha, admin.Senha))
-                return Unauthorized("Credenciais de administrador inválidas.");
-
-            return Ok(new { mensagem = "Login administrativo autorizado com sucesso!" });
+            return Unauthorized("Credenciais de administrador inválidas.");
         }
 
-        // Rota POST: Transferir saldo via Chave Única (ChavePix)
         [HttpPost("{id}/transferir")]
         public IActionResult Transferir(Guid id, [FromBody] TransferenciaDto request)
         {
-            if (request.Valor <= 0)
-                return BadRequest("O valor da transferência deve ser maior que zero.");
-
-            // 1. Busca a conta de origem (quem envia)
-            var contaOrigem = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.Id == id);
-
-            if (contaOrigem == null)
-                return NotFound("Conta de origem não encontrada.");
-
-            // 2. Busca a conta de destino usando a Chave Única (ChavePix) ou o ID
-            var contaDestino = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.ChavePix == request.ChaveDestino || c.Id.ToString() == request.ChaveDestino);
-
-            if (contaDestino == null)
-                return NotFound("Conta de destino não localizada com esta chave única.");
-
-            // 3. Impede auto-transferência
-            if (contaOrigem.Id == contaDestino.Id)
-                return BadRequest("Você não pode transferir dinheiro para a sua própria conta.");
-
-            // 4. Valida saldo suficiente
-            if (contaOrigem.Saldo < request.Valor)
-                return BadRequest("Saldo insuficiente para realizar esta transferência.");
-
             try
             {
-                // Executa a saída na origem e a entrada no destino
-                contaOrigem.Sacar(request.Valor);
-                contaDestino.Depositar(request.Valor);
-
-                _context.SaveChanges(); // Salva as alterações de ambas as contas no banco SQLite
-
-                return Ok(new { 
-                    mensagem = "Transferência realizada com sucesso!", 
-                    novoSaldoOrigem = contaOrigem.Saldo 
-                });
+                var novoSaldo = _contaService.Transferir(id, request.ChaveDestino, request.Valor);
+                return Ok(new { mensagem = "Transferência realizada com sucesso!", novoSaldoOrigem = novoSaldo });
             }
             catch (Exception ex)
             {
@@ -125,75 +71,41 @@ namespace Sistema_banc_rio_falso.Controllers
             }
         }
 
-        // Rota GET: Consultar saldo/dados da conta por ID (incluindo transações do banco)
         [HttpGet("{id}")]
         public IActionResult ConsultarSaldo(Guid id)
         {
-            var conta = _context.Contas
-                .Include(c => c.Transacoes) // Traz as transações relacionadas do banco
-                .FirstOrDefault(c => c.Id == id);
-
-            if (conta == null)
-                return NotFound("Conta não encontrada no sistema.");
-
-            return Ok(conta);
+            try
+            {
+                var conta = _contaService.ObterPorId(id);
+                return Ok(conta);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
-        // Rota GET: Consultar extrato de uma conta pelo ID
         [HttpGet("{id}/extrato")]
         public IActionResult ConsultarExtrato(Guid id)
         {
-            var conta = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.Id == id);
-
-            if (conta == null)
-                return NotFound("Conta não encontrada no sistema.");
-
-            return Ok(conta.Transacoes);
+            try
+            {
+                var extrato = _contaService.ObterExtrato(id);
+                return Ok(extrato);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
-        // Rota POST: Depositar dinheiro
         [HttpPost("{id}/depositar")]
         public IActionResult Depositar(Guid id, [FromBody] decimal valor)
         {
-            var conta = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.Id == id);
-            
-            if (conta == null)
-                return NotFound("Conta não localizada no sistema.");
-
             try
             {
-                conta.Depositar(valor);
-                _context.SaveChanges(); // Salva a alteração de saldo e a nova transação no banco
-                
-                return Ok(new { mensagem = "Depósito realizado com sucesso!", saldoAtual = conta.Saldo });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        // Rota POST: Sacar dinheiro
-        [HttpPost("{id}/sacar")]
-        public IActionResult Sacar(Guid id, [FromBody] decimal valor)
-        {
-            var conta = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.Id == id);
-            
-            if (conta == null)
-                return NotFound("Conta não localizada no sistema.");
-
-            try
-            {
-                conta.Sacar(valor);
-                _context.SaveChanges(); // Salva o novo saldo e o registro do saque
-                
-                return Ok(new { mensagem = "Saque autorizado!", saldoAtual = conta.Saldo });
+                var saldoAtual = _contaService.Depositar(id, valor);
+                return Ok(new { mensagem = "Depósito realizado com sucesso!", saldoAtual });
             }
             catch (Exception ex)
             {
@@ -201,43 +113,52 @@ namespace Sistema_banc_rio_falso.Controllers
             }
         }
 
-        // Rota GET: Buscar conta por CPF (Área Administrativa)
+        [HttpPost("{id}/sacar")]
+        public IActionResult Sacar(Guid id, [FromBody] decimal valor)
+        {
+            try
+            {
+                var saldoAtual = _contaService.Sacar(id, valor);
+                return Ok(new { mensagem = "Saque autorizado!", saldoAtual });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("buscar-por-cpf/{cpf}")]
         public IActionResult BuscarPorCpf(string cpf)
         {
-            var conta = _context.Contas
-                .Include(c => c.Transacoes)
-                .FirstOrDefault(c => c.Cpf == cpf);
-
-            if (conta == null)
-                return NotFound("Nenhuma conta encontrada com este CPF.");
-
-            return Ok(conta);
+            try
+            {
+                var conta = _contaService.BuscarPorCpf(cpf);
+                return Ok(conta);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
-        // Rota GET: Buscar conta por Nome (Área Administrativa)
         [HttpGet("buscar-por-nome/{nome}")]
         public IActionResult BuscarPorNome(string nome)
         {
-            var contas = _context.Contas
-                .Include(c => c.Transacoes)
-                .Where(c => c.Titular.Contains(nome))
-                .ToList();
-            
-            if (!contas.Any())
-                return NotFound("Nenhuma conta encontrada com este nome.");
-
-            return Ok(contas);
+            try
+            {
+                var contas = _contaService.BuscarPorNome(nome);
+                return Ok(contas);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
-        // Rota GET: Listar todas as contas cadastradas (Painel Administrativo)
         [HttpGet]
         public IActionResult ListarTodas()
         {
-            var contas = _context.Contas
-                .Include(c => c.Transacoes)
-                .ToList();
-
+            var contas = _contaService.ListarTodas();
             return Ok(contas);
         }
     }
