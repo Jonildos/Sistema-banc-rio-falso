@@ -97,7 +97,7 @@
 </div>
 
 <script>
-    // TRAVA DE SEGURANÇA: Se não passou pelo login, expulsa para a tela de login
+    // TRAVA DE SEGURANÇA OBRIGATÓRIA: Se não passou pelo login, expulsa para a tela de login
     if (sessionStorage.getItem("admin_autenticado") !== "true") {
         alert("Acesso restrito! Faça o login administrativo primeiro.");
         window.location.href = "admin-login.html";

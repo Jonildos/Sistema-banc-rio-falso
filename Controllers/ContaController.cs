@@ -59,17 +59,17 @@ namespace Sistema_banc_rio_falso.Controllers
             return Ok(novaConta);
         }
 
-        // Rota POST: Login do Administrador (Validando E-mail, CPF e Senha)
+        // Rota POST: Login do Administrador (Validando E-mail, CPF e Senha com BCrypt)
         [HttpPost("admin/login")]
         public IActionResult LoginAdmin([FromBody] LoginAdminDto credenciais)
         {
             var admin = _context.Administradores.FirstOrDefault(a => 
                 a.Email == credenciais.Email && 
-                a.Cpf == credenciais.Cpf && 
-                a.Senha == credenciais.Senha
+                a.Cpf == credenciais.Cpf
             );
 
-            if (admin == null)
+            // Valida se o admin existe e se a senha digitada confere com o hash do BCrypt
+            if (admin == null || !BCrypt.Net.BCrypt.Verify(credenciais.Senha, admin.Senha))
                 return Unauthorized("Credenciais de administrador inválidas.");
 
             return Ok(new { mensagem = "Login administrativo autorizado com sucesso!" });

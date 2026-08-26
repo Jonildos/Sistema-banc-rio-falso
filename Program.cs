@@ -1,3 +1,4 @@
+using BCrypt.Net;
 using Microsoft.Extensions.FileProviders;
 using Sistema_banc_rio_falso.Data;
 using Sistema_banc_rio_falso.Models;
@@ -28,7 +29,10 @@ using (var scope = app.Services.CreateScope())
     // Cria um Admin padrão se não existir nenhum cadastrado no sistema
     if (!dbContext.Administradores.Any())
     {
-        dbContext.Administradores.Add(new Administrador("admin@bancofalso.com", "000.000.000-00", "admin123"));
+        // Gera o hash criptográfico seguro da senha utilizando BCrypt
+        string senhaHash = BCrypt.Net.BCrypt.HashPassword("admin123");
+
+        dbContext.Administradores.Add(new Administrador("admin@bancofalso.com", "000.000.000-00", senhaHash));
         dbContext.SaveChanges();
     }
 }

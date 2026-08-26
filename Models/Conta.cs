@@ -22,28 +22,24 @@ namespace Sistema_banc_rio_falso.Models
             }
 
         //comportamentos (regras de negócio isoladas)
-        public void Depositar(decimal valor)
-            {
-                // A única trava: não pode depositar valor negativo ou R$ 0,00
-                if (valor <= 0)
-                    throw new ArgumentException("O valor de depósito deve ser maior que zero.");
+       public void Depositar(decimal valor)
+        {
+            if (valor <= 0)
+                throw new ArgumentException("O valor de depósito deve ser maior que zero.");
+            
+            Saldo += valor;
+            Transacoes.Add(new Transacao(TipoTransacao.Deposito, valor, this.Id));
+        }
 
-                // Se a trava não gritar, o dinheiro simplesmente entra
-                Saldo += valor;
-                Transacoes.Add(new Transacao("Depósito", valor, this.Id));
-            }
         public void Sacar(decimal valor)
-            {
-                if (valor <= 0)
-                    throw new ArgumentException("O valor de saque deve ser maior que zero.");
-
-                if (Saldo < valor)
-                    throw new InvalidOperationException("Saldo insuficiente para esta transação.");
-
-                Saldo -= valor;
-
-                // REGISTRA NO EXTRATO
-            Transacoes.Add(new Transacao("Saque", valor, this.Id));
-            }
+        {
+            if (valor <= 0)
+                throw new ArgumentException("O valor de saque deve ser maior que zero.");
+            if (Saldo < valor)
+                throw new InvalidOperationException("Saldo insuficiente para esta transação.");
+            
+            Saldo -= valor;
+            Transacoes.Add(new Transacao(TipoTransacao.Saque, valor, this.Id));
+        }
     }
 }
