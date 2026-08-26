@@ -18,7 +18,6 @@ namespace Sistema_banc_rio_falso.Services
             if (string.IsNullOrWhiteSpace(titular) || string.IsNullOrWhiteSpace(cpf) || string.IsNullOrWhiteSpace(senha))
                 throw new ArgumentException("O Titular, o CPF e a Senha são obrigatórios para a abertura da conta.");
             
-            // 👉 NOVO: Validação Matemática Rigorosa de CPF
             if (!Sistema_banc_rio_falso.Utils.ValidadorCpf.Validar(cpf))
                 throw new ArgumentException("CPF inválido! Verifique os dígitos informados ou se digitou caracteres inválidos.");
 
@@ -26,7 +25,6 @@ namespace Sistema_banc_rio_falso.Services
             if (cpfExiste)
                 throw new InvalidOperationException("Já existe uma conta cadastrada com este CPF no sistema.");
 
-            // Gera o hash seguro da senha do cliente utilizando BCrypt
             string senhaHash = BCrypt.Net.BCrypt.HashPassword(senha);
 
             var novaConta = new Conta(titular, cpf, senhaHash);
@@ -36,7 +34,6 @@ namespace Sistema_banc_rio_falso.Services
             return novaConta;
         }
 
-        // NOVO: Método de Login do Cliente
         public Conta LoginCliente(string cpfOuChave, string senha)
         {
             if (string.IsNullOrWhiteSpace(cpfOuChave) || string.IsNullOrWhiteSpace(senha))
@@ -103,11 +100,153 @@ namespace Sistema_banc_rio_falso.Services
             if (contaOrigem.Saldo < valor)
                 throw new InvalidOperationException("Saldo insuficiente para realizar esta transferência.");
 
-            contaOrigem.Sacar(valor);
-            contaDestino.Depositar(valor);
-            _context.SaveChanges();
+            // Identificador único que une o "trem" de ida (origem -> destino)
+            Guid transferenciaGrupoId = Guid.NewGuid();
 
+            // 1. O trem sai da origem (debitando o saldo)
+            contaOrigem.Sacar(valor);
+            
+            // 2. O trem chega ao destino (creditando o saldo de forma real)
+            contaDestino.Depositar(valor);
+
+            // Captura as transações geradas no final das listas de cada conta
+            var transacaoSaida = contaOrigem.Transacoes.LastOrDefault();
+            var transacaoEntrada = contaDestino.Transacoes.LastOrDefault();
+
+            if (transacaoSaida != null) 
+            {
+                transacaoSaida.ContaDestinoId = contaDestino.Id;
+                transacaoSaida.TransferenciaId = transferenciaGrupoId;
+            }
+            if (transacaoEntrada != null) 
+            {
+                transacaoEntrada.ContaDestinoId = contaOrigem.Id;
+                transacaoEntrada.TransferenciaId = transferenciaGrupoId;
+            }
+
+            _context.SaveChanges();
             return contaOrigem.Saldo;
+        }
+
+        public decimal AjustarSaldoAdmin(Guid id, decimal valor, string motivo)
+        {
+            var conta = ObterPorId(id);
+
+            if (valor == 0)
+                throw new ArgumentException("O valor do ajuste não pode ser zero.");
+
+            if (valor > 0)
+            {
+                conta.Depositar(valor);
+            }
+            else
+            {
+                conta.Sacar(Math.Abs(valor));
+            }
+
+            _context.SaveChanges();
+            return conta.Saldo;
+        }
+
+        // Estorno Automático, Atômico e Bidirecional (O trem faz o caminho de volta)
+        public void EstornarTransacao(int transacaoId)
+        {
+            var transacaoAlvo = _context.Transacoes.FirstOrDefault(t => t.Id == transacaoId)
+                ?? throw new KeyNotFoundException("Transação não encontrada.");
+
+            // 1. Estorno de Depósito simples
+            if (transacaoAlvo.Tipo == TipoTransacao.Deposito)
+            {
+                var conta = ObterPorId(transacaoAlvo.ContaId);
+                if (conta.Saldo < transacaoAlvo.Valor)
+                    throw new InvalidOperationException("Não é possível estornar este depósito, pois o titular já gastou o saldo.");
+                
+                conta.Sacar(transacaoAlvo.Valor);
+                _context.Transacoes.Remove(transacaoAlvo);
+            }
+            // 2. Estorno de Saque simples
+            else if (transacaoAlvo.Tipo == TipoTransacao.Saque)
+            {
+                var conta = ObterPorId(transacaoAlvo.ContaId);
+                conta.Depositar(transacaoAlvo.Valor);
+                _context.Transacoes.Remove(transacaoAlvo);
+            }
+            // 3. Estorno de Transferência (Faz o trem voltar exatamente para a origem)
+            else if (transacaoAlvo.Tipo == TipoTransacao.Transferencia)
+            {
+                if (transacaoAlvo.TransferenciaId.HasValue)
+                {
+                    // Busca as duas pontas da transferência no banco
+                    var transacoesDoGrupo = _context.Transacoes
+                        .Where(t => t.TransferenciaId == transacaoAlvo.TransferenciaId.Value)
+                        .ToList();
+
+                    if (transacoesDoGrupo.Count == 2)
+                    {
+                        // Identifica com precisão quem é a conta que enviou e quem é a conta que recebeu
+                        // A transação onde a ContaId é a origem do envio vs o destino
+                        var tOrigem = transacoesDoGrupo.FirstOrDefault(t => t.Id != transacaoAlvo.Id) ?? transacaoAlvo;
+                        
+                        // Descobre qual transação representou a saída (quem enviou) e qual representou a entrada (quem recebeu)
+                        var contaA = ObterPorId(transacaoAlvo.ContaId);
+                        var outraTransacao = transacoesDoGrupo.First(t => t.Id != transacaoAlvo.Id);
+                        var contaB = ObterPorId(outraTransacao.ContaId);
+
+                        // Como definimos quem é quem: na transferência, a conta que teve o saldo decrementado é a que enviou.
+                        // Para o estorno: quem recebeu o dinheiro perde o valor, e quem enviou recupera o valor.
+                        // Vamos determinar o destinatário atual (quem está com o dinheiro da transferência) e o remetente original:
+                        
+                        Conta contaRemetente;
+                        Conta contaDestinatario;
+
+                        // Descobrimos quem é o dono da conta de destino comparando com o ContaDestinoId registrado
+                        if (transacaoAlvo.ContaDestinoId.HasValue && transacaoAlvo.ContaId != transacaoAlvo.ContaDestinoId.Value)
+                        {
+                            // Se a transação alvo tem o destino, ela foi a saída da origem
+                            contaRemetente = contaA;
+                            contaDestinatario = contaB;
+                        }
+                        else
+                        {
+                            // Caso contrário, ela foi a entrada no destino, invertemos os papéis
+                            contaRemetente = contaB;
+                            contaDestinatario = contaA;
+                        }
+
+                        // Validação crucial: o destinatário ainda tem saldo suficiente para o estorno?
+                        if (contaDestinatario.Saldo < transacaoAlvo.Valor)
+                        {
+                            throw new InvalidOperationException("Impossível estornar: o destinatário já utilizou ou gastou o valor recebido.");
+                        }
+
+                        // O TREM VOLTA:
+                        // Retira o dinheiro da conta de quem recebeu
+                        contaDestinatario.Sacar(transacaoAlvo.Valor);
+                        
+                        // Devolve o dinheiro integralmente para a conta de quem enviou
+                        contaRemetente.Depositar(transacaoAlvo.Valor);
+
+                        // Remove ambos os registros de histórico das duas contas instantaneamente
+                        _context.Transacoes.RemoveRange(transacoesDoGrupo);
+                    }
+                    else
+                    {
+                        // Caso de segurança se houver apenas uma ponta órfã
+                        var contaAtual = ObterPorId(transacaoAlvo.ContaId);
+                        contaAtual.Depositar(transacaoAlvo.Valor);
+                        _context.Transacoes.Remove(transacaoAlvo);
+                    }
+                }
+                else
+                {
+                    // Fallback para transferências legadas
+                    var contaAtual = ObterPorId(transacaoAlvo.ContaId);
+                    contaAtual.Depositar(transacaoAlvo.Valor);
+                    _context.Transacoes.Remove(transacaoAlvo);
+                }
+            }
+
+            _context.SaveChanges();
         }
 
         public Conta BuscarPorCpf(string cpf)

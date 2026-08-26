@@ -18,7 +18,7 @@ namespace Sistema_banc_rio_falso.Controllers
         {
             public string Titular { get; set; } = string.Empty;
             public string Cpf { get; set; } = string.Empty;
-            public string Senha { get; set; } = string.Empty; // NOVO: Campo de senha do cliente
+            public string Senha { get; set; } = string.Empty;
         }
 
         public class LoginAdminDto
@@ -28,16 +28,22 @@ namespace Sistema_banc_rio_falso.Controllers
             public string Senha { get; set; } = string.Empty;
         }
 
+        public class LoginClienteDto
+        {
+            public string CpfOuChave { get; set; } = string.Empty;
+            public string Senha { get; set; } = string.Empty;
+        }
+
         public class TransferenciaDto
         {
             public string ChaveDestino { get; set; } = string.Empty; 
             public decimal Valor { get; set; }
         }
-        // DTO para Login do Cliente
-        public class LoginClienteDto
+
+        public class AjusteSaldoDto
         {
-            public string CpfOuChave { get; set; } = string.Empty;
-            public string Senha { get; set; } = string.Empty;
+            public decimal Valor { get; set; }
+            public string Motivo { get; set; } = string.Empty;
         }
 
         [HttpPost]
@@ -47,6 +53,28 @@ namespace Sistema_banc_rio_falso.Controllers
             {
                 var novaConta = _contaService.CriarConta(request.Titular, request.Cpf, request.Senha);
                 return Ok(novaConta);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("login")]
+        public IActionResult LoginCliente([FromBody] LoginClienteDto request)
+        {
+            try
+            {
+                var conta = _contaService.LoginCliente(request.CpfOuChave, request.Senha);
+                return Ok(conta);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
@@ -70,6 +98,34 @@ namespace Sistema_banc_rio_falso.Controllers
             {
                 var novoSaldo = _contaService.Transferir(id, request.ChaveDestino, request.Valor);
                 return Ok(new { mensagem = "Transferência realizada com sucesso!", novoSaldoOrigem = novoSaldo });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("admin/conta/{id}/ajustar-saldo")]
+        public IActionResult AjustarSaldoAdmin(Guid id, [FromBody] AjusteSaldoDto request)
+        {
+            try
+            {
+                var novoSaldo = _contaService.AjustarSaldoAdmin(id, request.Valor, request.Motivo);
+                return Ok(new { mensagem = "Saldo ajustado com sucesso pela administração!", novoSaldo });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("admin/transacao/{transacaoId}/estornar")]
+        public IActionResult EstornarTransacao(int transacaoId)
+        {
+            try
+            {
+                _contaService.EstornarTransacao(transacaoId);
+                return Ok(new { mensagem = "Transação estornada com sucesso!" });
             }
             catch (Exception ex)
             {
@@ -126,27 +182,6 @@ namespace Sistema_banc_rio_falso.Controllers
             {
                 var saldoAtual = _contaService.Sacar(id, valor);
                 return Ok(new { mensagem = "Saque autorizado!", saldoAtual });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-        [HttpPost("login")]
-        public IActionResult LoginCliente([FromBody] LoginClienteDto request)
-        {
-            try
-            {
-                var conta = _contaService.LoginCliente(request.CpfOuChave, request.Senha);
-                return Ok(conta);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(ex.Message);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
