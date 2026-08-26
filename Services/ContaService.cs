@@ -17,6 +17,10 @@ namespace Sistema_banc_rio_falso.Services
         {
             if (string.IsNullOrWhiteSpace(titular) || string.IsNullOrWhiteSpace(cpf) || string.IsNullOrWhiteSpace(senha))
                 throw new ArgumentException("O Titular, o CPF e a Senha são obrigatórios para a abertura da conta.");
+            
+            // 👉 NOVO: Validação Matemática Rigorosa de CPF
+            if (!Sistema_banc_rio_falso.Utils.ValidadorCpf.Validar(cpf))
+                throw new ArgumentException("CPF inválido! Verifique os dígitos informados ou se digitou caracteres inválidos.");
 
             bool cpfExiste = _context.Contas.Any(c => c.Cpf == cpf);
             if (cpfExiste)
