@@ -3,26 +3,30 @@ namespace Sistema_banc_rio_falso.Models
     //propriedades (O estado da conta)
     public class Conta
     {
-        public Guid Id {get; private set; }
-        public string Titular {get; private set; }
+        public Guid Id { get; private set; }
+        public string Titular { get; private set; } = string.Empty;
         public string Cpf { get; private set; } = string.Empty;
+        public string SenhaHash { get; private set; } = string.Empty; // NOVO: Armazena a senha criptografada
         public string ChavePix { get; private set; } = string.Empty;
-        public decimal Saldo {get; private set; }
+        public decimal Saldo { get; private set; }
         public List<Transacao> Transacoes { get; private set; } = new List<Transacao>();
-        
+
+        // Construtor vazio necessário para o Entity Framework Core
+        public Conta() { }
 
         // Construtor (como a conta nasce)
-        public Conta(string titular, string cpf)
-            {
-                Id = Guid.NewGuid(); //gera um id único no formato universal
-                Titular = titular;
-                Cpf = cpf;
-                Saldo = 0; //conta nasce zerada
-                ChavePix = "PIX-" + Id.ToString().Substring(0, 8).ToUpper();
-            }
+        public Conta(string titular, string cpf, string senhaHash)
+        {
+            Id = Guid.NewGuid(); // gera um id único no formato universal
+            Titular = titular;
+            Cpf = cpf;
+            SenhaHash = senhaHash;
+            Saldo = 0; // conta nasce zerada
+            ChavePix = "PIX-" + Id.ToString().Substring(0, 8).ToUpper();
+        }
 
         //comportamentos (regras de negócio isoladas)
-       public void Depositar(decimal valor)
+        public void Depositar(decimal valor)
         {
             if (valor <= 0)
                 throw new ArgumentException("O valor de depósito deve ser maior que zero.");

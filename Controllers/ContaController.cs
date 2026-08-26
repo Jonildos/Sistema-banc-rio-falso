@@ -18,6 +18,7 @@ namespace Sistema_banc_rio_falso.Controllers
         {
             public string Titular { get; set; } = string.Empty;
             public string Cpf { get; set; } = string.Empty;
+            public string Senha { get; set; } = string.Empty; // NOVO: Campo de senha do cliente
         }
 
         public class LoginAdminDto
@@ -32,13 +33,19 @@ namespace Sistema_banc_rio_falso.Controllers
             public string ChaveDestino { get; set; } = string.Empty; 
             public decimal Valor { get; set; }
         }
+        // DTO para Login do Cliente
+        public class LoginClienteDto
+        {
+            public string CpfOuChave { get; set; } = string.Empty;
+            public string Senha { get; set; } = string.Empty;
+        }
 
         [HttpPost]
         public IActionResult CriarConta([FromBody] CriarContaDto request)
         {
             try
             {
-                var novaConta = _contaService.CriarConta(request.Titular, request.Cpf);
+                var novaConta = _contaService.CriarConta(request.Titular, request.Cpf, request.Senha);
                 return Ok(novaConta);
             }
             catch (Exception ex)
@@ -50,7 +57,6 @@ namespace Sistema_banc_rio_falso.Controllers
         [HttpPost("admin/login")]
         public IActionResult LoginAdmin([FromBody] LoginAdminDto credenciais)
         {
-            // Validação simples mantida no controller ou movida futuramente
             if (credenciais.Email == "admin@bancofalso.com" && credenciais.Cpf == "000.000.000-00" && credenciais.Senha == "admin123")
                 return Ok(new { mensagem = "Login administrativo autorizado com sucesso!" });
 
@@ -120,6 +126,27 @@ namespace Sistema_banc_rio_falso.Controllers
             {
                 var saldoAtual = _contaService.Sacar(id, valor);
                 return Ok(new { mensagem = "Saque autorizado!", saldoAtual });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpPost("login")]
+        public IActionResult LoginCliente([FromBody] LoginClienteDto request)
+        {
+            try
+            {
+                var conta = _contaService.LoginCliente(request.CpfOuChave, request.Senha);
+                return Ok(conta);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {

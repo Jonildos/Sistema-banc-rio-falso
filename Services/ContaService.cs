@@ -13,20 +13,43 @@ namespace Sistema_banc_rio_falso.Services
             _context = context;
         }
 
-        public Conta CriarConta(string titular, string cpf)
+        public Conta CriarConta(string titular, string cpf, string senha)
         {
-            if (string.IsNullOrWhiteSpace(titular) || string.IsNullOrWhiteSpace(cpf))
-                throw new ArgumentException("O Titular e o CPF são obrigatórios para a abertura da conta.");
+            if (string.IsNullOrWhiteSpace(titular) || string.IsNullOrWhiteSpace(cpf) || string.IsNullOrWhiteSpace(senha))
+                throw new ArgumentException("O Titular, o CPF e a Senha são obrigatórios para a abertura da conta.");
 
             bool cpfExiste = _context.Contas.Any(c => c.Cpf == cpf);
             if (cpfExiste)
                 throw new InvalidOperationException("Já existe uma conta cadastrada com este CPF no sistema.");
 
-            var novaConta = new Conta(titular, cpf);
+            // Gera o hash seguro da senha do cliente utilizando BCrypt
+            string senhaHash = BCrypt.Net.BCrypt.HashPassword(senha);
+
+            var novaConta = new Conta(titular, cpf, senhaHash);
             _context.Contas.Add(novaConta);
             _context.SaveChanges();
 
             return novaConta;
+        }
+
+        // NOVO: Método de Login do Cliente
+        public Conta LoginCliente(string cpfOuChave, string senha)
+        {
+            if (string.IsNullOrWhiteSpace(cpfOuChave) || string.IsNullOrWhiteSpace(senha))
+                throw new ArgumentException("Informe o CPF ou Chave Única e a senha para entrar.");
+
+            var conta = _context.Contas
+                .Include(c => c.Transacoes)
+                .FirstOrDefault(c => c.Cpf == cpfOuChave || c.ChavePix == cpfOuChave);
+
+            if (conta == null)
+                throw new KeyNotFoundException("Conta não encontrada com estes dados.");
+
+            bool senhaValida = BCrypt.Net.BCrypt.Verify(senha, conta.SenhaHash);
+            if (!senhaValida)
+                throw new UnauthorizedAccessException("Senha incorreta.");
+
+            return conta;
         }
 
         public Conta ObterPorId(Guid id)

@@ -13,22 +13,57 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             
-            <!-- CARTÃO 1: Abertura de Conta -->
-            <div class="card shadow-sm mb-4" id="cartao-abertura">
+            <!-- CARTÃO 1: Autenticação (Login ou Abertura de Conta) -->
+            <div class="card shadow-sm mb-4" id="cartao-autenticacao">
                 <div class="card-body">
-                    <h3 class="mb-3 text-center">Bem-vindo ao Banco Falso</h3>
+                    <h3 class="mb-3 text-center">Banco Falso</h3>
                     
-                    <div class="mb-3">
-                        <label for="inputNome" class="form-label">Nome Completo</label>
-                        <input type="text" id="inputNome" class="form-control" placeholder="Digite seu nome">
-                    </div>
+                    <!-- Abas de navegação -->
+                    <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-login" data-bs-toggle="pill" data-bs-target="#div-login" type="button">Entrar</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-cadastro" data-bs-toggle="pill" data-bs-target="#div-cadastro" type="button">Abrir Conta</button>
+                        </li>
+                    </ul>
 
-                    <div class="mb-3">
-                        <label for="inputCpf" class="form-label">CPF</label>
-                        <input type="text" id="inputCpf" class="form-control" placeholder="Digite seu CPF">
-                    </div>
+                    <div class="tab-content" id="pills-tabContent">
+                        
+                        <!-- ABA 1: LOGIN -->
+                        <div class="tab-pane fade show active" id="div-login" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="inputLoginCpf" class="form-label">CPF ou Chave Única</label>
+                                <input type="text" id="inputLoginCpf" class="form-control" placeholder="000.000.000-00 ou PIX-...">
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputLoginSenha" class="form-label">Senha</label>
+                                <input type="password" id="inputLoginSenha" class="form-control" placeholder="Sua senha">
+                            </div>
+                            <button class="btn btn-success w-100" id="btnEntrar">Acessar Conta</button>
+                        </div>
 
-                    <button class="btn btn-primary w-100" id="btnCriar">Abrir Conta</button>
+                        <!-- ABA 2: CADASTRO -->
+                        <div class="tab-pane fade" id="div-cadastro" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="inputNome" class="form-label">Nome Completo</label>
+                                <input type="text" id="inputNome" class="form-control" placeholder="Digite seu nome">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="inputCpf" class="form-label">CPF</label>
+                                <input type="text" id="inputCpf" class="form-control" placeholder="Digite seu CPF">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="inputSenha" class="form-label">Senha de Acesso</label>
+                                <input type="password" id="inputSenha" class="form-control" placeholder="Crie uma senha">
+                            </div>
+
+                            <button class="btn btn-primary w-100" id="btnCriar">Abrir Conta</button>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
@@ -96,6 +131,9 @@
     </div>
 </div>
 
+<!-- Importando o JS do Bootstrap (necessário para as abas funcionarem) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     // Recupera o ID salvo na sessão do navegador (evita perder o acesso ao dar F5)
     let contaAtivaId = sessionStorage.getItem("contaAtivaId") || ""; 
@@ -126,7 +164,7 @@
             document.getElementById('displaySaldo').innerText = conta.saldo.toFixed(2);
             
             // Alterna os cartões
-            document.getElementById('cartao-abertura').classList.add('d-none');
+            document.getElementById('cartao-autenticacao').classList.add('d-none');
             document.getElementById('cartao-painel').classList.remove('d-none');
 
             carregarExtrato();
@@ -138,7 +176,7 @@
     function fazerLogoutCliente() {
         sessionStorage.removeItem("contaAtivaId");
         contaAtivaId = "";
-        document.getElementById('cartao-abertura').classList.remove('d-none');
+        document.getElementById('cartao-autenticacao').classList.remove('d-none');
         document.getElementById('cartao-painel').classList.add('d-none');
     }
 
@@ -161,13 +199,14 @@
             let htmlExtrato = "";
             transacoes.forEach(t => {
                 const dataFormatada = new Date(t.dataHora).toLocaleString('pt-BR');
-                const corValor = t.tipo === "Depósito" ? "text-success" : "text-danger";
-                const sinal = t.tipo === "Depósito" ? "+" : "-";
+                const corValor = t.tipo === 1 ? "text-success" : "text-danger"; 
+                const nomeTipo = t.tipo === 1 ? "Depósito" : (t.tipo === 2 ? "Saque" : "Transferência");
+                const sinal = t.tipo === 1 ? "+" : "-";
 
                 htmlExtrato += `
                     <tr>
                         <td class="small text-muted">${dataFormatada}</td>
-                        <td><span class="badge bg-${t.tipo === 'Depósito' ? 'success' : 'danger'}">${t.tipo}</span></td>
+                        <td><span class="badge bg-${t.tipo === 1 ? 'success' : 'danger'}">${nomeTipo}</span></td>
                         <td class="text-end font-monospace ${corValor}">${sinal} R$ ${t.valor.toFixed(2)}</td>
                     </tr>
                 `;
@@ -183,16 +222,17 @@
     document.getElementById('btnCriar').addEventListener('click', async () => {
         const titular = document.getElementById('inputNome').value.trim();
         const cpf = document.getElementById('inputCpf').value.trim();
+        const senha = document.getElementById('inputSenha').value.trim();
 
-        if (!titular || !cpf) {
-            return alert("Por favor, preencha o nome e o CPF!");
+        if (!titular || !cpf || !senha) {
+            return alert("Por favor, preencha o nome, o CPF e a senha!");
         }
 
         try {
             const resposta = await fetch(URL_BASE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ titular: titular, cpf: cpf })
+                body: JSON.stringify({ titular: titular, cpf: cpf, senha: senha })
             });
 
             if (!resposta.ok) {
@@ -202,7 +242,6 @@
 
             const conta = await resposta.json();
             
-            // Salva o ID no sessionStorage para persistir no F5
             contaAtivaId = conta.id;
             sessionStorage.setItem("contaAtivaId", contaAtivaId);
             
@@ -213,7 +252,40 @@
         }
     });
 
-    // 3. PROCESSAR TRANSAÇÕES (DEPOSITAR / SACAR)
+    // 3. LOGIN DO CLIENTE
+    document.getElementById('btnEntrar').addEventListener('click', async () => {
+        const cpfOuChave = document.getElementById('inputLoginCpf').value.trim();
+        const senha = document.getElementById('inputLoginSenha').value.trim();
+
+        if (!cpfOuChave || !senha) {
+            return alert("Por favor, preencha o CPF ou Chave e a senha!");
+        }
+
+        try {
+            const resposta = await fetch(`${URL_BASE}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cpfOuChave: cpfOuChave, senha: senha })
+            });
+
+            if (!resposta.ok) {
+                const erroMsg = await resposta.text();
+                return alert("Falha no login: " + erroMsg);
+            }
+
+            const conta = await resposta.json();
+            
+            contaAtivaId = conta.id;
+            sessionStorage.setItem("contaAtivaId", contaAtivaId);
+            
+            await carregarDadosContaAtiva();
+
+        } catch (erro) {
+            console.error("Erro ao realizar login:", erro);
+        }
+    });
+
+    // 4. PROCESSAR TRANSAÇÕES (DEPOSITAR / SACAR)
     async function processarTransacao(tipo) {
         const valor = parseFloat(document.getElementById('inputValor').value);
         if (!valor || valor <= 0) return alert("Digite um valor válido!");
@@ -242,7 +314,7 @@
         }
     }
 
-    // 4. TRANSFERIR VIA CHAVE ÚNICA
+    // 5. TRANSFERIR VIA CHAVE ÚNICA
     document.getElementById('btnTransferir').addEventListener('click', async () => {
         const chaveDestino = document.getElementById('inputChaveDestino').value.trim();
         const valor = parseFloat(document.getElementById('inputValorTransferencia').value);
