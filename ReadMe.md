@@ -10,7 +10,7 @@ Projeto full-stack desenvolvido para estudar aprofundadamente arquitetura de API
 * **Banco de Dados & ORM:** **Entity Framework Core**, **SQLite** (banco relacional em arquivo local com persistência imutável).
 * **Front-End:** HTML5, JavaScript Moderno (`async/await`, `fetch API`), CSS3, Framework Bootstrap 5 para UI Responsiva.
 * **Arquitetura & Segurança:** 
-  * Estrutura **Monorepo** integrando API e telas estáticas separadas (Portal do Cliente, Tela de Login Admin e Portal Admin).
+  * Estrutura **Monorepo** integrando API e arquivos estáticos servidos diretamente pelo Kestrel (.NET).
   * Validação de unicidade de dados no banco (CPF único por conta).
   * Persistência de sessão no lado do cliente (`sessionStorage`) para manter o usuário autenticado após recarregamentos de página (`F5`).
   * Controle de acesso restrito no painel administrativo via validação de credenciais de Administrador na API.
@@ -39,11 +39,22 @@ Projeto full-stack desenvolvido para estudar aprofundadamente arquitetura de API
 ### Pré-requisitos
 * Ter o [.NET SDK](https://dotnet.microsoft.com/) instalado na sua máquina.
 
-### 1. Clonar e Rodar o Back-End (API)
-Abra o terminal na pasta raiz do projeto e execute os comandos:
-```bash
-# Restaura as dependências (incluindo o Entity Framework e SQLite)
-dotnet restore
+### Passo a Passo para Rodar:
 
-# Executa o servidor C# (O banco SQLite 'banco_bancofalso.db' será gerado automaticamente)
-dotnet run
+1. **Clone o repositório e navegue até a pasta raiz:**
+   ```bash
+   cd NomeDoRepositorio
+   dotnet restore
+   dotnet run
+
+2. **Com o servidor rodando abra o seu navegador e acesse:**
+    portal do cliente: http://localhost:5279/index.html
+    painel administrativo: http://localhost:5279/admin-login.html
+    credenciais: admin@bancofalso.com / 000.000.000-00 / admin123
+
+### Créditos e agradecimentos:
+Meu tio Rafael Araujo Soares - pela consultoria na configuração avançada do provedor de arquivos estáticos do ASP.NET Core, unificando o front-end estático ao ciclo de vida da api na mesma porta
+
+Leonardo Resende - pelos direcionamentos valiosos sobre padrões de mercado
+
+Sinueh - pelos apontamentos sobre separação de responsabilidades (service pattern) e arquitetura de rotas
