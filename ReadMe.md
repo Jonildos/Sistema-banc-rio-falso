@@ -1,36 +1,38 @@
 # 🏦 Simulador Bancário API & Web Client (Monorepo)
 
-Projeto full-stack desenvolvido para estudar aprofundadamente arquitetura de APIs RESTful em C# (.NET), persistência de dados com ORM, regras de domínio financeiro, segurança de acesso e integração com Front-End moderno.
+Projeto full-stack desenvolvido para estudar aprofundadamente arquitetura de APIs RESTful em C# (.NET), persistência de dados com ORM, regras de domínio financeiro, segurança de acesso, tratamento de estornos cruzados/bidirecionais e integração com Front-End moderno estilo *fintech*.
 
 ---
 
 ## 🚀 Tecnologias e Conceitos Aplicados
 
-* **Back-End:** C#, .NET (ASP.NET Core Web API), Programação Orientada a Objetos (POO), Encapsulamento (`private set`).
-* **Banco de Dados & ORM:** **Entity Framework Core**, **SQLite** (banco relacional em arquivo local com persistência imutável).
-* **Front-End:** HTML5, JavaScript Moderno (`async/await`, `fetch API`), CSS3, Framework Bootstrap 5 para UI Responsiva.
+* **Back-End:** C#, .NET (ASP.NET Core Web API), Programação Orientada a Objetos (POO), Encapsulamento de domínio (`private set`).
+* **Banco de Dados & ORM:** **Entity Framework Core**, **SQLite** (banco relacional em arquivo local com persistência imutável e gerenciamento de chaves estrangeiras).
+* **Segurança de Acesso:** Hashing seguro de senhas utilizando a biblioteca **BCrypt** (`BCrypt.Net-Next`) para prevenção de vazamento de credenciais.
+* **Front-End:** HTML5, JavaScript Moderno (`async/await`, `fetch API`), CSS3, Framework Bootstrap 5 para UI Responsiva e FontAwesome para ícones corporativos.
 * **Arquitetura & Segurança:** 
-  * Estrutura **Monorepo** integrando API e arquivos estáticos servidos diretamente pelo Kestrel (.NET).
-  * Validação de unicidade de dados no banco (CPF único por conta).
-  * Persistência de sessão no lado do cliente (`sessionStorage`) para manter o usuário autenticado após recarregamentos de página (`F5`).
-  * Controle de acesso restrito no painel administrativo via validação de credenciais de Administrador na API.
-  * Uso de DTOs (*Data Transfer Objects*) para segurança de entrada de dados.
+  * Estrutura **Monorepo** unificando a API e os arquivos estáticos do front-end servidos diretamente pelo Kestrel (.NET).
+  * Validação matemática rigorosa de CPF e unicidade de dados no banco (impedindo CPFs duplicados).
+  * Persistência de sessão no lado do cliente (`sessionStorage`) para manter o usuário e o administrador autenticados após recarregamentos de página (`F5`).
+  * Unificação da autenticação administrativa em arquivo único (`admin.html`), eliminando redundâncias de páginas de login isoladas.
+  * Uso de DTOs (*Data Transfer Objects*) para desacoplamento e segurança na entrada de dados via corpo de requisição (`[FromBody]`).
 
 ---
 
 ## ⚙️ Regras de Negócio do Sistema
 
 1. **Criação de Conta:** 
-   * Exige obrigatoriamente Nome (Titular) e CPF, gerando um identificador único (`Guid`), uma **Chave Única de transferência automática** (estilo chave PIX/cripto) e iniciando com saldo zerado.
-   * **Unicidade:** O sistema valida rigidamente se o CPF já existe no banco de dados antes de autorizar a abertura de uma nova conta.
+   * Exige obrigatoriamente Nome (Titular), CPF e Senha de acesso. Gera um identificador universal (`Guid`), um hash seguro de senha via BCrypt e uma **Chave Única de transferência automática** (`ChavePix` estilo PIX).
+   * **Validação Rígida:** O sistema valida tanto a integridade matemática dos dígitos do CPF quanto a unicidade do cadastro no banco de dados.
 2. **Transações e Transferências Seguras:** 
-   * **Depósitos:** Validados para aceitar apenas valores estritamente maiores que zero.
-   * **Saques:** Protegidos contra saldo insuficiente e valores negativos (retornando erro HTTP 400 controlado).
-   * **Transferência por Chave Única:** Permite enviar valores diretamente para outra conta informando apenas a chave de destino, realizando a transação de forma atômica no banco de dados.
-3. **Auditoria e Extrato:** Todas as movimentações (Depósitos, Saques e Transferências) criam registros relacionais na tabela `Transacoes`, gravando data e hora exatas (`DateTime.Now`) vinculadas à respectiva conta.
-4. **Painel Administrativo Restrito:** 
-   * Requer login com credenciais de administrador validadas no banco de dados.
-   * Permite a listagem em tempo real de todas as contas do sistema e a auditoria detalhada de saldos e históricos por busca de CPF ou Nome.
+   * **Depósitos e Saques:** Protegidos contra saldos negativos, valores zerados e restrições de saldo em caso de retiradas indevidas.
+   * **Transferência por Chave Única:** Realiza o envio de valores de forma atômica e simultânea entre as contas envolvidas, gerando rastreabilidade cruzada (`ContaDestinoId` e `TransferenciaId`).
+3. **Auditoria, Extrato e Estorno Automatizado:** 
+   * Todas as movimentações geram registros relacionais na tabela `Transacoes`, gravando data, hora e tipo.
+   * **Estorno Unificado pelo Admin:** Ao solicitar o estorno de uma transferência em qualquer uma das pontas do extrato, o sistema valida ativamente se o destinatário ainda possui saldo disponível, retira o valor de lá, **devolve integralmente para a conta de quem enviou** e remove ambas as pontas do histórico do banco de forma automática.
+4. **Painel Administrativo Restrito (`admin.html`):** 
+   * Conta com fluxo integrado de autenticação master.
+   * Permite listagem geral de contas, busca dinâmica por nome/cpf, auditoria de extrato detalhado por conta, ajuste administrativo de saldo (juros, dívidas ou empréstimos) e acionamento de estornos com um único clique.
 
 ---
 
@@ -38,12 +40,13 @@ Projeto full-stack desenvolvido para estudar aprofundadamente arquitetura de API
 
 ### Pré-requisitos
 * Ter o [.NET SDK](https://dotnet.microsoft.com/) instalado na sua máquina.
+* Extensão **Live Server** (no VS Code) recomendada para servir o Front-End de forma fluida.
 
 ### Passo a Passo para Rodar:
 
-1. **Clone o repositório e navegue até a pasta raiz:**
+1. **Navegue até a pasta raiz do projeto no terminal:**
    ```bash
-   cd NomeDoRepositorio
+   cd Sistema-banc-rio-falso
    dotnet restore
    dotnet run
 
